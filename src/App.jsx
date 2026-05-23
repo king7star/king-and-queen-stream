@@ -124,7 +124,8 @@ const translations = {
     adminTitle: "KI👑NG ADMIN PORTAL",
     userManagement: "User Management",
     sendNotification: "Send Push Notification",
-    broadcast: "Broadcast Message"
+    broadcast: "Broadcast Message",
+    confirmDelete: "Confirm Delete Account"
   },
   ar: {
     appTitle: "KING LIVE QUEEN",
@@ -201,7 +202,8 @@ const translations = {
     adminTitle: "بوابة الأدمن للـ KI👑NG",
     userManagement: "إدارة المستخدمين",
     sendNotification: "إرسال إشعار",
-    broadcast: "إرسال الرسالة"
+    broadcast: "إرسال الرسالة",
+    confirmDelete: "تأكيد حذف الحساب"
   }
 };
 
@@ -277,7 +279,7 @@ const App = () => {
         </nav>
       )}
 
-      {/* Main Content */}
+      {/* Main Content Area */}
       <main className={`${!isFullscreen ? 'pt-14 pb-20' : ''} min-h-screen`}>
         {renderView({ view, navigate, t, isRtl, setLang, currentUser, setCurrentUser, unreadMessages, showNsfw, setShowNsfw, walletBalance, viewerCount, setShowLogout, isAdmin })}
       </main>
@@ -685,7 +687,7 @@ const ActiveStreamView = ({ t, navigate, isRtl, viewerCount }) => {
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60"></div>
       <div className="absolute top-0 left-0 right-0 p-6 flex justify-between items-start z-10">
         <div className="flex items-center gap-2 bg-black/40 backdrop-blur-md rounded-full px-3 py-1.5 text-white border border-white/10">
-          <UserIcon size={14} className="text-pink-500" />
+          <UsersIcon size={14} className="text-pink-500" />
           <span className="text-xs font-bold tracking-tighter">{viewerCount.toLocaleString()} {t.viewers}</span>
         </div>
         <button onClick={() => navigate('home')} className="w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-pink-500"><X size={24} /></button>
@@ -704,6 +706,8 @@ const ActiveStreamView = ({ t, navigate, isRtl, viewerCount }) => {
   );
 };
 
+// --- REMAINING INTERACTIVE VIEWS ---
+
 const PrivacySettingsView = ({ t, navigate, isRtl }) => (
   <div className="animate-in fade-in duration-300">
     <div className={`p-4 flex items-center gap-4 border-b border-gray-100 dark:border-gray-800 ${isRtl ? 'flex-row-reverse' : ''}`}>
@@ -711,25 +715,26 @@ const PrivacySettingsView = ({ t, navigate, isRtl }) => (
       <h2 className="text-xl font-bold">{t.privacy}</h2>
     </div>
     <div className="p-6 space-y-8">
-      <PrivacyToggle label={t.whoCanSeeBirth} t={t} isRtl={isRtl} />
-      <PrivacyToggle label={t.whoCanSeeStatus} t={t} isRtl={isRtl} />
-      <PrivacyToggle label={t.whoCanMessage} t={t} isRtl={isRtl} />
+      <PrivacySelector label={t.whoCanSeeBirth} options={[t.anyone, t.friends, t.noOne]} isRtl={isRtl} />
+      <PrivacySelector label={t.whoCanSeeStatus} options={[t.anyone, t.friends, t.noOne]} isRtl={isRtl} />
+      <PrivacySelector label={t.whoCanMessage} options={[t.anyone, t.friends, t.noOne]} isRtl={isRtl} />
     </div>
   </div>
 );
 
-const PrivacyToggle = ({ label, t, isRtl }) => (
-  <div className="space-y-3">
-    <p className={`font-bold text-sm ${isRtl ? 'text-right' : ''}`}>{label}</p>
-    <div className={`flex flex-wrap gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
-      {[t.anyone, t.friends, t.noOne].map((opt, i) => (
-        <button key={i} className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all ${i === 0 ? 'bg-pink-500 border-pink-500 text-white' : 'border-gray-200 dark:border-gray-800'}`}>
-          {opt}
-        </button>
-      ))}
+const PrivacySelector = ({ label, options, isRtl }) => {
+  const [selected, setSelected] = useState(0);
+  return (
+    <div className="space-y-3">
+      <p className={`font-bold text-sm ${isRtl ? 'text-right' : ''}`}>{label}</p>
+      <div className={`flex flex-wrap gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
+        {options.map((opt, i) => (
+          <button key={i} onClick={() => setSelected(i)} className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all ${selected === i ? 'bg-pink-500 border-pink-500 text-white shadow-lg' : 'border-gray-200 dark:border-gray-800 text-gray-500'}`}>{opt}</button>
+        ))}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const BlockedUsersView = ({ t, navigate, isRtl }) => (
   <div className="animate-in fade-in duration-300">
@@ -737,10 +742,8 @@ const BlockedUsersView = ({ t, navigate, isRtl }) => (
       <button onClick={() => navigate('settings')}><ArrowLeft size={24} className={isRtl ? 'rotate-180' : ''} /></button>
       <h2 className="text-xl font-bold">{t.blockedUsers}</h2>
     </div>
-    <div className="flex flex-col items-center justify-center min-h-[60vh] px-10 text-center space-y-6">
-      <div className="w-24 h-24 bg-pink-50 dark:bg-pink-900/10 rounded-3xl flex items-center justify-center rotate-12">
-        <UserX size={48} className="text-pink-500" />
-      </div>
+    <div className="flex flex-col items-center justify-center min-h-[70vh] px-10 text-center space-y-6">
+      <div className="w-24 h-24 bg-pink-50 dark:bg-pink-900/10 rounded-3xl flex items-center justify-center rotate-12"><UserX size={48} className="text-pink-500" /></div>
       <p className="text-sm font-medium text-gray-500 leading-relaxed italic">{t.blockEmpty}</p>
     </div>
   </div>
@@ -753,16 +756,9 @@ const TransactionsView = ({ t, navigate, isRtl }) => (
       <h2 className="text-xl font-bold">{t.transactions}</h2>
     </div>
     <div className="p-4 space-y-3">
-      {[
-        { name: 'Sarah_K', date: '2024-03-10', amount: '+40' },
-        { name: 'Boss_99', date: '2024-03-09', amount: '+250' },
-        { name: 'Queen_Bee', date: '2024-03-08', amount: '+1.5k' },
-      ].map((tx, i) => (
+      {[ { name: 'Sarah_K', date: '2024-03-10', amount: '+40' }, { name: 'Boss_99', date: '2024-03-09', amount: '+250' }, { name: 'Queen_Bee', date: '2024-03-08', amount: '+1.5k' } ].map((tx, i) => (
         <div key={i} className={`bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-4 rounded-2xl flex items-center justify-between ${isRtl ? 'flex-row-reverse' : ''}`}>
-          <div className={isRtl ? 'text-right' : ''}>
-            <p className="font-bold text-sm">Gift from {tx.name}</p>
-            <p className="text-[10px] text-gray-400">{tx.date}</p>
-          </div>
+          <div className={isRtl ? 'text-right' : ''}><p className="font-bold text-sm">Gift from {tx.name}</p><p className="text-[10px] text-gray-400">{tx.date}</p></div>
           <p className="font-black italic text-green-500 text-lg tracking-tighter">{tx.amount}</p>
         </div>
       ))}
@@ -770,53 +766,40 @@ const TransactionsView = ({ t, navigate, isRtl }) => (
   </div>
 );
 
-const WithdrawalView = ({ t, navigate, isRtl, walletBalance }) => (
-  <div className="animate-in fade-in duration-300">
-    <div className={`p-4 flex items-center gap-4 border-b border-gray-100 dark:border-gray-800 ${isRtl ? 'flex-row-reverse' : ''}`}>
-      <button onClick={() => navigate('settings')}><ArrowLeft size={24} className={isRtl ? 'rotate-180' : ''} /></button>
-      <h2 className="text-xl font-bold">{t.withdrawal}</h2>
-    </div>
-    <div className="p-6 space-y-6">
-      <div className="bg-gray-50 dark:bg-gray-900 p-6 rounded-3xl text-center border border-gray-100 dark:border-gray-800">
-        <p className="text-[10px] font-black uppercase text-gray-400 mb-2">Available Balance</p>
-        <p className="text-4xl font-black italic mb-1">{walletBalance.toLocaleString()}</p>
-        <p className="text-pink-500 font-bold text-xs">{t.withdrawalEquiv}</p>
+const WithdrawalView = ({ t, navigate, isRtl, walletBalance }) => {
+  const [amount, setAmount] = useState(1000);
+  return (
+    <div className="animate-in fade-in duration-300">
+      <div className={`p-4 flex items-center gap-4 border-b border-gray-100 dark:border-gray-800 ${isRtl ? 'flex-row-reverse' : ''}`}>
+        <button onClick={() => navigate('settings')}><ArrowLeft size={24} className={isRtl ? 'rotate-180' : ''} /></button>
+        <h2 className="text-xl font-bold">{t.withdrawal}</h2>
       </div>
-      <div className="space-y-4">
-        <EditInput label={t.withdrawAmount} value="1000" isRtl={isRtl} onChange={() => {}} />
-        <div className="space-y-1">
-          <label className={`block text-[10px] font-black uppercase text-gray-400 ${isRtl ? 'text-right' : ''}`}>{t.paymentMethod}</label>
-          <select className={`w-full bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 text-sm focus:ring-1 focus:ring-pink-500 outline-none appearance-none ${isRtl ? 'text-right' : ''}`}>
-            <option>PayPal</option>
-            <option>Bank Transfer</option>
-            <option>Crypto Wallet</option>
-          </select>
+      <div className="p-6 space-y-6">
+        <div className="bg-gray-50 dark:bg-gray-900 p-6 rounded-3xl text-center border border-gray-100 dark:border-gray-800">
+          <p className="text-[10px] font-black uppercase text-gray-400 mb-2">Available Balance</p>
+          <p className="text-4xl font-black italic mb-1">{walletBalance.toLocaleString()}</p>
+          <p className="text-pink-500 font-bold text-xs">{t.withdrawalEquiv} ({ (amount * 0.004).toFixed(1) }$)</p>
         </div>
-        <button className="w-full py-4 bg-pink-500 text-white font-black rounded-2xl shadow-xl shadow-pink-500/20 italic tracking-tighter uppercase">
-          {t.withdrawAction}
-        </button>
+        <div className="space-y-4">
+          <EditInput label={t.withdrawAmount} value={amount} onChange={v => setAmount(v)} isRtl={isRtl} />
+          <div className="space-y-1">
+            <label className={`block text-[10px] font-black uppercase text-gray-400 ${isRtl ? 'text-right' : ''}`}>{t.paymentMethod}</label>
+            <select className={`w-full bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 text-sm outline-none appearance-none ${isRtl ? 'text-right' : ''}`}><option>PayPal</option><option>Bank Transfer</option></select>
+          </div>
+          <button className={`w-full py-4 font-black rounded-2xl shadow-xl uppercase italic ${amount > walletBalance ? 'bg-gray-300 cursor-not-allowed' : 'bg-pink-500 text-white'}`}>{t.withdrawAction}</button>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 const DeleteAccountView = ({ t, navigate, isRtl }) => (
   <div className="p-6 flex flex-col items-center justify-center min-h-[80vh] text-center space-y-8 animate-in zoom-in-95 duration-300">
-    <div className="w-24 h-24 bg-pink-100 dark:bg-pink-900/20 rounded-full flex items-center justify-center text-pink-500 relative">
-      <Trash2 size={48} />
-      <AlertCircle size={24} className="absolute top-0 right-0 bg-white dark:bg-black rounded-full" />
-    </div>
-    <div className="space-y-2">
-      <h2 className="text-2xl font-black italic text-pink-500">{t.deleteAccount}</h2>
-      <p className="text-gray-500 text-sm leading-relaxed max-w-xs mx-auto">{t.deleteConfirm}</p>
-    </div>
+    <div className="w-24 h-24 bg-pink-100 dark:bg-pink-900/20 rounded-full flex items-center justify-center text-pink-500 relative"><Trash2 size={48} /><AlertCircle size={24} className="absolute top-0 right-0 bg-white dark:bg-black rounded-full" /></div>
+    <div className="space-y-2"><h2 className="text-2xl font-black italic text-pink-500">{t.deleteAccount}</h2><p className="text-gray-500 text-sm leading-relaxed max-w-xs mx-auto">{t.deleteConfirm}</p></div>
     <div className="w-full space-y-3">
-      <button className="w-full py-4 bg-pink-500 text-white font-black rounded-2xl shadow-xl shadow-pink-500/20 italic tracking-tighter uppercase">
-        Confirm Delete
-      </button>
-      <button onClick={() => navigate('settings')} className="w-full py-4 bg-gray-100 dark:bg-gray-900 font-black rounded-2xl italic tracking-tighter uppercase">
-        {t.cancel}
-      </button>
+      <button className="w-full py-4 bg-pink-500 text-white font-black rounded-2xl shadow-xl uppercase italic tracking-widest">{t.confirmDelete}</button>
+      <button onClick={() => navigate('settings')} className="w-full py-4 bg-gray-100 dark:bg-gray-900 font-black rounded-2xl italic uppercase">{t.cancel}</button>
     </div>
   </div>
 );
@@ -828,21 +811,12 @@ const StaticPageView = ({ t, navigate, isRtl, showNsfw, setShowNsfw }) => (
       <h2 className="text-xl font-bold">Details</h2>
     </div>
     <div className="p-6 space-y-6">
-       <div className="w-20 h-20 bg-gray-100 dark:bg-gray-900 rounded-3xl mx-auto flex items-center justify-center text-gray-300 dark:text-gray-700">
-         <FileText size={40} />
-       </div>
+       <div className="w-20 h-20 bg-gray-100 dark:bg-gray-900 rounded-3xl mx-auto flex items-center justify-center text-gray-300 dark:text-gray-700"><FileText size={40} /></div>
        <div className="space-y-4">
-         <p className={`text-sm leading-relaxed text-gray-600 dark:text-gray-400 ${isRtl ? 'text-right' : ''}`}>
-           This page contains detailed information about the selected setting.
-         </p>
+         <p className={`text-sm leading-relaxed text-gray-600 dark:text-gray-400 ${isRtl ? 'text-right' : ''}`}>This page contains detailed information about the selected setting.</p>
          <div className={`flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900 rounded-2xl ${isRtl ? 'flex-row-reverse' : ''}`}>
            <span className="font-bold text-sm">{t.sensitiveContent}</span>
-           <button
-            onClick={() => setShowNsfw(!showNsfw)}
-            className={`w-12 h-6 rounded-full relative transition-colors ${showNsfw ? 'bg-pink-500' : 'bg-gray-300 dark:bg-gray-700'}`}
-           >
-             <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${showNsfw ? (isRtl ? 'left-1' : 'right-1') : (isRtl ? 'right-1' : 'left-1')}`}></div>
-           </button>
+           <button onClick={() => setShowNsfw(!showNsfw)} className={`w-12 h-6 rounded-full relative transition-colors ${showNsfw ? 'bg-pink-500' : 'bg-gray-300 dark:bg-gray-700'}`}><div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${showNsfw ? (isRtl ? 'left-1' : 'right-1') : (isRtl ? 'right-1' : 'left-1')}`}></div></button>
          </div>
        </div>
     </div>
@@ -855,42 +829,26 @@ const AdminDashboardView = ({ t, navigate, isRtl }) => (
       <div className="relative z-10">
         <h2 className="text-3xl font-black italic tracking-tighter mb-4">{t.adminTitle}</h2>
         <div className="flex gap-4">
-          <div className="bg-white/10 backdrop-blur-md px-4 py-2 rounded-xl">
-             <p className="text-[8px] uppercase font-bold opacity-60">Total Users</p>
-             <p className="text-lg font-black italic">124,582</p>
-          </div>
-          <div className="bg-white/10 backdrop-blur-md px-4 py-2 rounded-xl">
-             <p className="text-[8px] uppercase font-bold opacity-60">Live Now</p>
-             <p className="text-lg font-black italic">1,480</p>
-          </div>
+          <div className="bg-white/10 backdrop-blur-md px-4 py-2 rounded-xl"><p className="text-[8px] uppercase font-bold opacity-60">Total Users</p><p className="text-lg font-black italic">124,582</p></div>
+          <div className="bg-white/10 backdrop-blur-md px-4 py-2 rounded-xl"><p className="text-[8px] uppercase font-bold opacity-60">Live Now</p><p className="text-lg font-black italic">1,480</p></div>
         </div>
       </div>
     </div>
-
     <div className="space-y-6">
        <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-100 dark:border-gray-800 space-y-4">
           <h3 className="font-bold">{t.userManagement}</h3>
           <div className="space-y-2">
             {[1, 2].map(i => (
               <div key={i} className={`flex items-center justify-between p-3 bg-gray-50 dark:bg-black rounded-2xl ${isRtl ? 'flex-row-reverse' : ''}`}>
-                 <div className={`flex items-center gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
-                   <div className="w-8 h-8 rounded-full bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center font-bold text-pink-500 text-xs">K</div>
-                   <p className="text-xs font-bold">User_{i}</p>
-                 </div>
-                 <div className="flex gap-2">
-                    <button className="p-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg"><Settings size={14}/></button>
-                    <button className="p-1.5 bg-red-100 dark:bg-red-900/30 text-red-500 rounded-lg"><Shield size={14}/></button>
-                 </div>
+                 <div className={`flex items-center gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}><div className="w-8 h-8 rounded-full bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center font-bold text-pink-500 text-xs">K</div><p className="text-xs font-bold">User_{i}</p></div>
+                 <div className="flex gap-2"><button className="p-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg"><Settings size={14}/></button><button className="p-1.5 bg-red-100 dark:bg-red-900/30 text-red-500 rounded-lg"><Shield size={14}/></button></div>
               </div>
             ))}
           </div>
        </div>
-
        <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-100 dark:border-gray-800 space-y-4">
           <h3 className="font-bold">{t.sendNotification}</h3>
-          <input type="text" placeholder="Title" className="w-full bg-gray-50 dark:bg-black border border-gray-100 dark:border-gray-800 rounded-xl p-3 text-xs outline-none" />
-          <textarea placeholder="Message" className="w-full bg-gray-50 dark:bg-black border border-gray-100 dark:border-gray-800 rounded-xl p-3 text-xs outline-none h-24" />
-          <button className="w-full py-3 bg-pink-500 text-white font-bold rounded-xl uppercase text-xs">{t.broadcast}</button>
+          <input type="text" placeholder="Title" className="w-full bg-gray-50 dark:bg-black border border-gray-100 dark:border-gray-800 rounded-xl p-3 text-xs outline-none" /><textarea placeholder="Message" className="w-full bg-gray-50 dark:bg-black border border-gray-100 dark:border-gray-800 rounded-xl p-3 text-xs outline-none h-24" /><button className="w-full py-3 bg-pink-500 text-white font-bold rounded-xl uppercase text-xs">{t.broadcast}</button>
        </div>
     </div>
   </div>
