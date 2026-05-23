@@ -34,6 +34,7 @@ const App = () => {
 
   const t = translations[lang];
   const isRtl = lang === 'ar';
+  const isAdmin = profile?.is_admin || false;
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -110,13 +111,27 @@ const AuthView = ({ t, isRtl }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState(null);
 
   const handleAuth = async (e) => {
     e.preventDefault();
     setLoading(true);
-    if (isLogin) await supabase.auth.signInWithPassword({ email, password });
-    else await supabase.auth.signUp({ email, password });
-    setLoading(false);
+    setMessage(null);
+    try {
+      const { error, data } = isLogin
+        ? await supabase.auth.signInWithPassword({ email, password })
+        : await supabase.auth.signUp({ email, password });
+
+      if (error) {
+        setMessage({ type: 'error', text: error.message });
+      } else if (!isLogin && data?.user && data?.session === null) {
+        setMessage({ type: 'success', text: isRtl ? 'تم إرسال بريد تأكيد، يرجى تفعيله!' : 'Confirmation email sent, please verify!' });
+      }
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -125,6 +140,11 @@ const AuthView = ({ t, isRtl }) => {
          <h1 className="text-5xl font-black italic tracking-tighter text-pink-500 mb-2">KI👑NG</h1>
          <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">Live Queen Streaming</p>
        </div>
+       {message && (
+         <div className={`mb-6 p-4 rounded-2xl text-xs font-bold w-full max-w-sm border ${message.type === 'error' ? 'bg-red-500/10 border-red-500/50 text-red-500' : 'bg-green-500/10 border-green-500/50 text-green-500'}`}>
+            {message.text}
+         </div>
+       )}
        <form onSubmit={handleAuth} className="w-full max-w-sm space-y-4">
           <input type="email" placeholder={t.email} className="w-full bg-gray-900 border border-gray-800 rounded-2xl p-4 outline-none focus:ring-1 focus:ring-pink-500" value={email} onChange={e => setEmail(e.target.value)} />
           <input type="password" placeholder={t.password} className="w-full bg-gray-900 border border-gray-800 rounded-2xl p-4 outline-none focus:ring-1 focus:ring-pink-500" value={password} onChange={e => setPassword(e.target.value)} />
