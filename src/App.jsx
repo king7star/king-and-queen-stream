@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Layout,
   Heart,
@@ -23,14 +23,15 @@ import {
   LogOut,
   RefreshCw,
   Mic,
+  MicOff,
   X,
-  Radio,
-  Gift,
   Package,
   Globe,
   Eye,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Gift,
+  Radio
 } from 'lucide-react';
 
 // --- TRANSLATIONS ---
@@ -76,7 +77,7 @@ const translations = {
     deleteConfirm: "Are you sure you want to delete your account? This action is permanent.",
     birthDate: "Birth Date",
     country: "Country",
-    save: "Save",
+    save: "Save Changes",
     whoCanSeeBirth: "Who can see your birthday?",
     whoCanSeeStatus: "Who can see your online status?",
     whoCanMessage: "Who can message you?",
@@ -88,10 +89,12 @@ const translations = {
     withdrawAmount: "Amount to withdraw",
     paymentMethod: "Payment Method",
     withdrawAction: "Withdraw",
-    sensitiveContent: "Show potentially sensitive content",
+    sensitiveContent: "Show potentially sensitive content (NSFW)",
     start: "Start",
     connecting: "Connecting...",
-    viewers: "Viewers"
+    viewers: "Viewers",
+    male: "Male ♂️",
+    female: "Female ♀️"
   },
   ar: {
     appTitle: "KING LIVE QUEEN",
@@ -134,7 +137,7 @@ const translations = {
     deleteConfirm: "هل أنت متأكد من رغبتك في حذف حسابك؟ هذا الإجراء نهائي ولا يمكن التراجع عنه...",
     birthDate: "تاريخ الميلاد",
     country: "البلد",
-    save: "حفظ",
+    save: "حفظ التعديلات",
     whoCanSeeBirth: "من يمكنه رؤية تاريخ ميلادك؟",
     whoCanSeeStatus: "من يمكنه رؤية آخر ظهور لك وحالتك على الإنترنت؟",
     whoCanMessage: "من يمكنه إرسال رسائل إليك؟",
@@ -146,31 +149,58 @@ const translations = {
     withdrawAmount: "كمية العملات المراد سحبها",
     paymentMethod: "طريقة السحب",
     withdrawAction: "سحب",
-    sensitiveContent: "إظهار المحتوى الذي يحتمل أن يكون حساساً",
+    sensitiveContent: "إظهار المحتوى الذي يحتمل أن يكون حساساً (NSFW)",
     start: "ابدأ",
     connecting: "جاري الاتصال...",
-    viewers: "مشاهد"
+    viewers: "مشاهد",
+    male: "ذكر ♂️",
+    female: "أنثى ♀️"
   }
 };
 
-// --- COMPONENTS ---
-
 const App = () => {
+  // --- STATE ---
   const [lang, setLang] = useState('ar');
   const [view, setView] = useState('home');
   const [prevView, setPrevView] = useState('home');
   const [showLogout, setShowLogout] = useState(false);
-  const [hasNewMessage, setHasNewMessage] = useState(true);
+  const [unreadMessages, setUnreadMessages] = useState(1);
+  const [showNsfw, setShowNsfw] = useState(false);
+  const [walletBalance, setWalletBalance] = useState(3410.00);
+  const [viewerCount, setViewerCount] = useState(1240);
+
+  // User Data
+  const [currentUser, setCurrentUser] = useState({
+    name: "kingstar",
+    avatar: null,
+    gender: "Male",
+    bio: "Streaming my journey to the top! 👑 #KING #QUEEN",
+    location: "United Kingdom",
+    birthDate: "1999-05-15",
+    posts: 12,
+    followers: 1400,
+    following: 840
+  });
 
   const t = translations[lang];
   const isRtl = lang === 'ar';
+
+  // --- REQUISITE DYNAMICS ---
+  // Simulate live viewer changes
+  useEffect(() => {
+    if (view === 'active_stream') {
+      const interval = setInterval(() => {
+        setViewerCount(prev => prev + (Math.random() > 0.5 ? 1 : -1) * Math.floor(Math.random() * 10));
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [view]);
 
   const navigate = (newView) => {
     setPrevView(view);
     setView(newView);
   };
 
-  // Views that don't show NavBars
   const isFullscreen = ['stream_setup', 'connecting', 'active_stream'].includes(view);
 
   return (
@@ -184,11 +214,11 @@ const App = () => {
           </div>
           <div className="flex items-center gap-4">
             <Search size={22} className="cursor-pointer hover:text-pink-500 transition-colors" />
-            <div className="relative cursor-pointer" onClick={() => navigate('messages')}>
+            <div className="relative cursor-pointer" onClick={() => { navigate('messages'); setUnreadMessages(0); }}>
               <MessageCircle size={22} className="hover:text-pink-500 transition-colors" />
-              {hasNewMessage && (
+              {unreadMessages > 0 && (
                 <span className="absolute -top-1 -right-1 w-4 h-4 bg-pink-500 rounded-full text-[10px] flex items-center justify-center text-white font-bold border-2 border-white dark:border-black">
-                  1
+                  {unreadMessages}
                 </span>
               )}
             </div>
@@ -198,7 +228,7 @@ const App = () => {
 
       {/* Main Content */}
       <main className={`${!isFullscreen ? 'pt-14 pb-20' : ''} min-h-screen`}>
-        {renderView(view, navigate, t, isRtl, setLang)}
+        {renderView({ view, navigate, t, isRtl, setLang, currentUser, setCurrentUser, unreadMessages, showNsfw, setShowNsfw, walletBalance, viewerCount, setShowLogout })}
       </main>
 
       {/* Bottom Navigation Bar */}
@@ -267,25 +297,26 @@ const NavItem = ({ active, icon, onClick }) => (
   </button>
 );
 
-const renderView = (view, navigate, t, isRtl, setLang) => {
+const renderView = (props) => {
+  const { view } = props;
   switch (view) {
-    case 'home': return <EmptyState t={t} title={t.home} />;
-    case 'following': return <EmptyState t={t} title={t.following} />;
-    case 'feed': return <FeedView t={t} isRtl={isRtl} />;
-    case 'store': return <StoreView t={t} isRtl={isRtl} />;
-    case 'profile': return <ProfileView t={t} navigate={navigate} isRtl={isRtl} />;
-    case 'settings': return <SettingsView t={t} navigate={navigate} isRtl={isRtl} setLang={setLang} />;
-    case 'settings_edit_profile': return <EditProfileView t={t} navigate={navigate} isRtl={isRtl} />;
-    case 'settings_privacy': return <PrivacySettingsView t={t} navigate={navigate} isRtl={isRtl} />;
-    case 'settings_blocked': return <BlockedUsersView t={t} navigate={navigate} isRtl={isRtl} />;
-    case 'settings_transactions': return <TransactionsView t={t} navigate={navigate} isRtl={isRtl} />;
-    case 'settings_withdrawal': return <WithdrawalView t={t} navigate={navigate} isRtl={isRtl} />;
-    case 'settings_delete_account': return <DeleteAccountView t={t} navigate={navigate} isRtl={isRtl} />;
-    case 'settings_static': return <StaticPageView t={t} navigate={navigate} isRtl={isRtl} />;
-    case 'stream_setup': return <StreamSetupView t={t} navigate={navigate} isRtl={isRtl} />;
-    case 'connecting': return <ConnectingView t={t} navigate={navigate} isRtl={isRtl} />;
-    case 'active_stream': return <ActiveStreamView t={t} navigate={navigate} isRtl={isRtl} />;
-    default: return <EmptyState t={t} title="404" />;
+    case 'home': return <EmptyState {...props} title={props.t.home} />;
+    case 'following': return <EmptyState {...props} title={props.t.following} />;
+    case 'feed': return <FeedView {...props} />;
+    case 'store': return <StoreView {...props} />;
+    case 'profile': return <ProfileView {...props} />;
+    case 'settings': return <SettingsView {...props} />;
+    case 'settings_edit_profile': return <EditProfileView {...props} />;
+    case 'settings_privacy': return <PrivacySettingsView {...props} />;
+    case 'settings_blocked': return <BlockedUsersView {...props} />;
+    case 'settings_transactions': return <TransactionsView {...props} />;
+    case 'settings_withdrawal': return <WithdrawalView {...props} />;
+    case 'settings_delete_account': return <DeleteAccountView {...props} />;
+    case 'settings_static': return <StaticPageView {...props} />;
+    case 'stream_setup': return <StreamSetupView {...props} />;
+    case 'connecting': return <ConnectingView {...props} />;
+    case 'active_stream': return <ActiveStreamView {...props} />;
+    default: return <EmptyState {...props} title="404" />;
   }
 };
 
@@ -299,7 +330,7 @@ const EmptyState = ({ t, title }) => (
   </div>
 );
 
-const FeedView = ({ t, isRtl }) => (
+const FeedView = ({ t, isRtl, showNsfw }) => (
   <div className="p-4 space-y-4 animate-in slide-in-from-bottom-10 duration-500">
     <h2 className="text-2xl font-black italic mb-4">{t.feed}</h2>
     {[1, 2, 3].map(id => (
@@ -311,7 +342,9 @@ const FeedView = ({ t, isRtl }) => (
             <p className="text-[10px] text-gray-500">2h ago</p>
           </div>
         </div>
-        <p className={`text-sm mb-4 ${isRtl ? 'text-right' : ''}`}>This is a sample post on the KING LIVE QUEEN feed. Everything adjusts to your theme!</p>
+        <p className={`text-sm mb-4 ${isRtl ? 'text-right' : ''}`}>
+          {id === 2 && showNsfw ? "[NSFW CONTENT] Explicit streaming content visible because NSFW is ON." : "This is a sample post on the KING LIVE QUEEN feed. Everything adjusts to your theme!"}
+        </p>
         <div className={`flex gap-4 text-gray-500 text-xs ${isRtl ? 'flex-row-reverse' : ''}`}>
           <div className="flex items-center gap-1"><Heart size={14} /> 1.2k</div>
           <div className="flex items-center gap-1"><MessageCircle size={14} /> 45</div>
@@ -321,12 +354,12 @@ const FeedView = ({ t, isRtl }) => (
   </div>
 );
 
-const StoreView = ({ t, isRtl }) => (
+const StoreView = ({ t, isRtl, walletBalance }) => (
   <div className="p-6 space-y-6 animate-in fade-in duration-500">
     <h2 className="text-2xl font-black italic mb-2">{t.store}</h2>
     <div className="bg-gradient-to-br from-pink-500 to-purple-600 p-6 rounded-[2.5rem] text-white shadow-xl shadow-pink-500/20">
       <p className="text-white/70 text-xs font-bold uppercase tracking-widest mb-1">{t.walletBalance}</p>
-      <p className="text-4xl font-black italic">3,410.00</p>
+      <p className="text-4xl font-black italic">{walletBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
     </div>
     <div className="space-y-4">
       <h3 className={`font-bold text-lg ${isRtl ? 'text-right' : ''}`}>{t.rechargeOptions}</h3>
@@ -356,12 +389,14 @@ const StoreView = ({ t, isRtl }) => (
   </div>
 );
 
-const ProfileView = ({ t, navigate, isRtl }) => (
+const ProfileView = ({ t, navigate, isRtl, currentUser }) => (
   <div className="animate-in fade-in duration-500">
     <div className="p-6 text-center space-y-4 border-b border-gray-100 dark:border-gray-800">
       <div className="relative inline-block">
         <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-pink-500 to-purple-500 p-1 mx-auto">
-          <div className="w-full h-full rounded-full bg-white dark:bg-black flex items-center justify-center font-black text-3xl text-pink-500">K</div>
+          <div className="w-full h-full rounded-full bg-white dark:bg-black flex items-center justify-center font-black text-3xl text-pink-500">
+            {currentUser.avatar ? <img src={currentUser.avatar} className="w-full h-full rounded-full object-cover" /> : currentUser.name.charAt(0).toUpperCase()}
+          </div>
         </div>
         <button
           onClick={() => navigate('settings_edit_profile')}
@@ -371,26 +406,26 @@ const ProfileView = ({ t, navigate, isRtl }) => (
         </button>
       </div>
       <div>
-        <h2 className="text-2xl font-black italic">King_User_99, 24</h2>
+        <h2 className="text-2xl font-black italic">{currentUser.name}, {new Date().getFullYear() - new Date(currentUser.birthDate).getFullYear()}</h2>
         <div className="flex items-center justify-center gap-1 text-gray-500 text-sm mt-1">
-          <Globe size={14} /> <span>United Kingdom</span>
+          <Globe size={14} /> <span>{currentUser.location}</span>
         </div>
       </div>
       <div className="flex justify-center gap-8 py-2">
         <div className="text-center">
-          <p className="font-black text-lg italic">12</p>
+          <p className="font-black text-lg italic">{currentUser.posts}</p>
           <p className="text-[10px] uppercase font-bold text-gray-400">{t.posts}</p>
         </div>
         <div className="text-center">
-          <p className="font-black text-lg italic">1.4k</p>
+          <p className="font-black text-lg italic">{(currentUser.followers/1000).toFixed(1)}k</p>
           <p className="text-[10px] uppercase font-bold text-gray-400">{t.followers}</p>
         </div>
         <div className="text-center">
-          <p className="font-black text-lg italic">840</p>
+          <p className="font-black text-lg italic">{currentUser.following}</p>
           <p className="text-[10px] uppercase font-bold text-gray-400">{t.following_count}</p>
         </div>
       </div>
-      <p className="text-sm text-gray-600 dark:text-gray-400 max-w-xs mx-auto">Streaming my journey to the top! 👑 #KING #QUEEN</p>
+      <p className="text-sm text-gray-600 dark:text-gray-400 max-w-xs mx-auto">{currentUser.bio}</p>
 
       <div className="flex gap-2">
         <button
@@ -415,7 +450,7 @@ const ProfileView = ({ t, navigate, isRtl }) => (
   </div>
 );
 
-const SettingsView = ({ t, navigate, isRtl, setLang }) => (
+const SettingsView = ({ t, navigate, isRtl, setLang, setShowLogout }) => (
   <div className="animate-in slide-in-from-right-10 duration-300">
     <div className={`p-4 flex items-center gap-4 border-b border-gray-100 dark:border-gray-800 ${isRtl ? 'flex-row-reverse' : ''}`}>
       <button onClick={() => navigate('profile')}><ArrowLeft size={24} className={isRtl ? 'rotate-180' : ''} /></button>
@@ -454,7 +489,7 @@ const SettingsView = ({ t, navigate, isRtl, setLang }) => (
 
       <SettingsSection title={t.dangerZone}>
         <SettingsItem icon={<Trash2 size={20} className="text-pink-500" />} label={t.deleteAccount} onClick={() => navigate('settings_delete_account')} isRtl={isRtl} />
-        <SettingsItem icon={<LogOut size={20} className="text-pink-500" />} label={t.logout} onClick={() => {}} isRtl={isRtl} />
+        <SettingsItem icon={<LogOut size={20} className="text-pink-500" />} label={t.logout} onClick={() => setShowLogout(true)} isRtl={isRtl} />
       </SettingsSection>
     </div>
   </div>
@@ -480,44 +515,85 @@ const SettingsItem = ({ icon, label, onClick, isRtl }) => (
   </button>
 );
 
-const EditProfileView = ({ t, navigate, isRtl }) => (
-  <div className="animate-in slide-in-from-bottom-10 duration-300">
-    <div className={`p-4 flex items-center gap-4 border-b border-gray-100 dark:border-gray-800 ${isRtl ? 'flex-row-reverse' : ''}`}>
-      <button onClick={() => navigate('settings')}><ArrowLeft size={24} className={isRtl ? 'rotate-180' : ''} /></button>
-      <h2 className="text-xl font-bold">{t.editProfile}</h2>
-    </div>
-    <div className="p-6 space-y-6">
-      <div className="text-center">
-         <div className="w-24 h-24 rounded-full bg-gray-100 dark:bg-gray-900 mx-auto relative group cursor-pointer mb-2">
-            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/20 rounded-full transition-opacity">
-              <Pencil size={20} className="text-white" />
-            </div>
-         </div>
-         <p className="text-pink-500 font-bold text-xs">Change Photo</p>
-      </div>
-      <div className="space-y-4">
-        <EditInput label={isRtl ? 'اسم المستخدم' : 'Username'} value="King_User_99" isRtl={isRtl} />
-        <EditInput label={t.gender} value="Male" isRtl={isRtl} />
-        <EditInput label={t.birthDate} value="1999-05-15" isRtl={isRtl} />
-        <EditInput label={t.country} value="United Kingdom" isRtl={isRtl} />
-        <div className="space-y-1">
-          <label className={`block text-[10px] font-black uppercase text-gray-400 ${isRtl ? 'text-right' : ''}`}>{t.bio}</label>
-          <textarea className={`w-full bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 text-sm focus:ring-1 focus:ring-pink-500 outline-none ${isRtl ? 'text-right' : ''}`} value="Streaming my journey to the top! 👑 #KING #QUEEN" />
-        </div>
-        <button className="w-full py-4 bg-pink-500 text-white font-black rounded-2xl shadow-xl shadow-pink-500/20 italic tracking-tighter uppercase">
-          {t.save}
-        </button>
-      </div>
-    </div>
-  </div>
-);
+const EditProfileView = ({ t, navigate, isRtl, currentUser, setCurrentUser }) => {
+  const [formData, setFormData] = useState(currentUser);
+  const [isSaved, setIsSaved] = useState(false);
 
-const EditInput = ({ label, value, isRtl }) => (
+  const handleSave = () => {
+    setCurrentUser(formData);
+    setIsSaved(true);
+    setTimeout(() => setIsSaved(false), 2000);
+  };
+
+  return (
+    <div className="animate-in slide-in-from-bottom-10 duration-300">
+      <div className={`p-4 flex items-center gap-4 border-b border-gray-100 dark:border-gray-800 ${isRtl ? 'flex-row-reverse' : ''}`}>
+        <button onClick={() => navigate('settings')}><ArrowLeft size={24} className={isRtl ? 'rotate-180' : ''} /></button>
+        <h2 className="text-xl font-bold">{t.editProfile}</h2>
+      </div>
+      <div className="p-6 space-y-6">
+        <div className="text-center">
+           <div className="w-24 h-24 rounded-full bg-gray-100 dark:bg-gray-900 mx-auto relative group cursor-pointer mb-2">
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/20 rounded-full transition-opacity">
+                <Pencil size={20} className="text-white" />
+              </div>
+              {formData.avatar ? <img src={formData.avatar} className="w-full h-full rounded-full object-cover" /> : <div className="w-full h-full flex items-center justify-center font-bold text-2xl">{formData.name.charAt(0).toUpperCase()}</div>}
+           </div>
+           <p className="text-pink-500 font-bold text-xs">Change Photo</p>
+        </div>
+        <div className="space-y-4">
+          <EditInput label={isRtl ? 'اسم المستخدم' : 'Username'} value={formData.name} onChange={v => setFormData({...formData, name: v})} isRtl={isRtl} />
+
+          {/* Gender Selector */}
+          <div className="space-y-1">
+            <label className={`block text-[10px] font-black uppercase text-gray-400 ${isRtl ? 'text-right' : ''}`}>{t.gender}</label>
+            <div className={`flex gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
+               {['Male', 'Female'].map(g => (
+                 <button
+                  key={g}
+                  onClick={() => setFormData({...formData, gender: g})}
+                  className={`flex-1 py-3 rounded-2xl font-bold text-sm border transition-all ${formData.gender === g ? 'bg-pink-500 border-pink-500 text-white shadow-lg' : 'bg-gray-50 dark:bg-gray-900 border-gray-100 dark:border-gray-800 text-gray-500'}`}
+                 >
+                   {g === 'Male' ? t.male : t.female}
+                 </button>
+               ))}
+            </div>
+          </div>
+
+          <EditInput label={t.birthDate} value={formData.birthDate} type="date" onChange={v => setFormData({...formData, birthDate: v})} isRtl={isRtl} />
+          <EditInput label={t.country} value={formData.location} onChange={v => setFormData({...formData, location: v})} isRtl={isRtl} />
+          <div className="space-y-1">
+            <label className={`block text-[10px] font-black uppercase text-gray-400 ${isRtl ? 'text-right' : ''}`}>{t.bio}</label>
+            <textarea
+              className={`w-full bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 text-sm focus:ring-1 focus:ring-pink-500 outline-none ${isRtl ? 'text-right' : ''}`}
+              value={formData.bio}
+              onChange={e => setFormData({...formData, bio: e.target.value})}
+            />
+          </div>
+
+          <button
+            onClick={handleSave}
+            className={`w-full py-4 font-black rounded-2xl shadow-xl italic tracking-tighter uppercase transition-all ${isSaved ? 'bg-green-500 text-white' : 'bg-pink-500 text-white shadow-pink-500/20 active:scale-95'}`}
+          >
+            {isSaved ? (isRtl ? 'تم الحفظ ✅' : 'Saved ✅') : t.save}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const EditInput = ({ label, value, type = "text", onChange, isRtl }) => (
   <div className="space-y-1">
     <label className={`block text-[10px] font-black uppercase text-gray-400 ${isRtl ? 'text-right' : ''}`}>{label}</label>
     <div className={`relative flex items-center ${isRtl ? 'flex-row-reverse' : ''}`}>
-      <input type="text" className={`w-full bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 text-sm focus:ring-1 focus:ring-pink-500 outline-none ${isRtl ? 'text-right' : ''}`} defaultValue={value} />
-      <Pencil size={14} className={`absolute ${isRtl ? 'left-4' : 'right-4'} text-gray-300`} />
+      <input
+        type={type}
+        className={`w-full bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 text-sm focus:ring-1 focus:ring-pink-500 outline-none ${isRtl ? 'text-right' : ''}`}
+        defaultValue={value}
+        onChange={e => onChange(e.target.value)}
+      />
+      <Pencil size={14} className={`absolute ${isRtl ? 'left-4' : 'right-4'} text-gray-300 pointer-events-none`} />
     </div>
   </div>
 );
@@ -588,7 +664,7 @@ const TransactionsView = ({ t, navigate, isRtl }) => (
   </div>
 );
 
-const WithdrawalView = ({ t, navigate, isRtl }) => (
+const WithdrawalView = ({ t, navigate, isRtl, walletBalance }) => (
   <div className="animate-in fade-in duration-300">
     <div className={`p-4 flex items-center gap-4 border-b border-gray-100 dark:border-gray-800 ${isRtl ? 'flex-row-reverse' : ''}`}>
       <button onClick={() => navigate('settings')}><ArrowLeft size={24} className={isRtl ? 'rotate-180' : ''} /></button>
@@ -597,11 +673,11 @@ const WithdrawalView = ({ t, navigate, isRtl }) => (
     <div className="p-6 space-y-6">
       <div className="bg-gray-50 dark:bg-gray-900 p-6 rounded-3xl text-center border border-gray-100 dark:border-gray-800">
         <p className="text-[10px] font-black uppercase text-gray-400 mb-2">Available Balance</p>
-        <p className="text-4xl font-black italic mb-1">3,410.00</p>
+        <p className="text-4xl font-black italic mb-1">{walletBalance.toLocaleString()}</p>
         <p className="text-pink-500 font-bold text-xs">{t.withdrawalEquiv}</p>
       </div>
       <div className="space-y-4">
-        <EditInput label={t.withdrawAmount} value="1000" isRtl={isRtl} />
+        <EditInput label={t.withdrawAmount} value="1000" isRtl={isRtl} onChange={() => {}} />
         <div className="space-y-1">
           <label className={`block text-[10px] font-black uppercase text-gray-400 ${isRtl ? 'text-right' : ''}`}>{t.paymentMethod}</label>
           <select className={`w-full bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 text-sm focus:ring-1 focus:ring-pink-500 outline-none appearance-none ${isRtl ? 'text-right' : ''}`}>
@@ -639,7 +715,7 @@ const DeleteAccountView = ({ t, navigate, isRtl }) => (
   </div>
 );
 
-const StaticPageView = ({ t, navigate, isRtl }) => (
+const StaticPageView = ({ t, navigate, isRtl, showNsfw, setShowNsfw }) => (
   <div className="animate-in fade-in duration-300">
     <div className={`p-4 flex items-center gap-4 border-b border-gray-100 dark:border-gray-800 ${isRtl ? 'flex-row-reverse' : ''}`}>
       <button onClick={() => navigate('settings')}><ArrowLeft size={24} className={isRtl ? 'rotate-180' : ''} /></button>
@@ -655,8 +731,11 @@ const StaticPageView = ({ t, navigate, isRtl }) => (
          </p>
          <div className={`flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900 rounded-2xl ${isRtl ? 'flex-row-reverse' : ''}`}>
            <span className="font-bold text-sm">{t.sensitiveContent}</span>
-           <button className="w-12 h-6 bg-pink-500 rounded-full relative">
-             <div className={`absolute top-1 ${isRtl ? 'left-1' : 'right-1'} w-4 h-4 bg-white rounded-full`}></div>
+           <button
+            onClick={() => setShowNsfw(!showNsfw)}
+            className={`w-12 h-6 rounded-full relative transition-colors ${showNsfw ? 'bg-pink-500' : 'bg-gray-300 dark:bg-gray-700'}`}
+           >
+             <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${showNsfw ? (isRtl ? 'left-1' : 'right-1') : (isRtl ? 'right-1' : 'left-1')}`}></div>
            </button>
          </div>
        </div>
@@ -664,38 +743,77 @@ const StaticPageView = ({ t, navigate, isRtl }) => (
   </div>
 );
 
-const StreamSetupView = ({ t, navigate, isRtl }) => (
-  <div className="h-screen bg-black relative overflow-hidden">
-    {/* Mock Camera Feed */}
-    <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/60">
-       <div className="flex items-center justify-center h-full">
-          <Video size={100} className="text-white/20 animate-pulse" />
-       </div>
-    </div>
+const StreamSetupView = ({ t, navigate, isRtl }) => {
+  const videoRef = useRef(null);
+  const [stream, setStream] = useState(null);
+  const [isMuted, setIsMuted] = useState(false);
+  const [useFrontCamera, setUseFrontCamera] = useState(true);
 
-    {/* Overlays */}
-    <div className="absolute inset-0 p-6 flex flex-col">
-       <div className="flex justify-between items-center">
-          <button onClick={() => navigate('home')} className="w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white">
-            <X size={24} />
-          </button>
-          <div className="flex gap-2">
-            <button className="w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white"><RefreshCw size={20} /></button>
-            <button className="w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white"><Mic size={20} /></button>
-          </div>
-       </div>
+  const startCamera = async () => {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: useFrontCamera ? 'user' : 'environment' },
+        audio: true
+      });
+      setStream(s);
+      if (videoRef.current) videoRef.current.srcObject = s;
+    } catch (e) {
+      console.error("Camera access denied", e);
+    }
+  };
 
-       <div className="mt-auto flex flex-col items-center gap-8 mb-12">
-          <button
-            onClick={() => navigate('connecting')}
-            className="w-32 h-32 bg-pink-500 rounded-full shadow-2xl shadow-pink-500/50 flex items-center justify-center text-white font-black italic text-2xl border-8 border-pink-400/30 animate-pulse"
-          >
-            {t.start}
-          </button>
-       </div>
+  useEffect(() => {
+    startCamera();
+    return () => stream?.getTracks().forEach(t => t.stop());
+  }, [useFrontCamera]);
+
+  const toggleMute = () => {
+    if (stream) {
+      stream.getAudioTracks().forEach(track => track.enabled = isMuted);
+      setIsMuted(!isMuted);
+    }
+  };
+
+  return (
+    <div className="h-screen bg-black relative overflow-hidden">
+      <video ref={videoRef} autoPlay playsInline muted className="absolute inset-0 w-full h-full object-cover" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60"></div>
+
+      {/* Overlays */}
+      <div className="absolute inset-0 p-6 flex flex-col">
+         <div className="flex justify-between items-center">
+            <button onClick={() => navigate('home')} className="w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white">
+              <X size={24} />
+            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setUseFrontCamera(!useFrontCamera)}
+                className="w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white active:scale-90 transition-transform"
+              >
+                <RefreshCw size={20} />
+              </button>
+              <button
+                onClick={toggleMute}
+                className={`w-10 h-10 backdrop-blur-md rounded-full flex items-center justify-center text-white active:scale-90 transition-transform ${isMuted ? 'bg-pink-500' : 'bg-black/40'}`}
+              >
+                {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
+              </button>
+            </div>
+         </div>
+
+         <div className="mt-auto flex flex-col items-center gap-8 mb-12">
+            <button
+              onClick={() => navigate('connecting')}
+              className="w-32 h-32 bg-pink-500 rounded-full shadow-2xl shadow-pink-500/50 flex items-center justify-center text-white font-black italic text-2xl border-8 border-pink-400/30 animate-pulse active:scale-95 transition-transform"
+            >
+              {t.start}
+            </button>
+         </div>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const ConnectingView = ({ t, navigate }) => {
   useEffect(() => {
@@ -717,44 +835,58 @@ const ConnectingView = ({ t, navigate }) => {
   );
 };
 
-const ActiveStreamView = ({ t, navigate, isRtl }) => (
-  <div className="h-screen bg-black relative">
-    {/* Fullscreen Video Mock */}
-    <div className="absolute inset-0 flex items-center justify-center opacity-30">
-      <Radio size={200} className="text-pink-500" />
-    </div>
+const ActiveStreamView = ({ t, navigate, isRtl, viewerCount }) => {
+  const videoRef = useRef(null);
+  const [isMuted, setIsMuted] = useState(false);
 
-    {/* Header */}
-    <div className="absolute top-0 left-0 right-0 p-6 flex justify-between items-start z-10">
-      <div className="flex items-center gap-2 bg-black/40 backdrop-blur-md rounded-full px-3 py-1 text-white">
-        <User size={14} />
-        <span className="text-xs font-bold">1,240 {t.viewers}</span>
+  useEffect(() => {
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      .then(s => { if (videoRef.current) videoRef.current.srcObject = s; });
+  }, []);
+
+  return (
+    <div className="h-screen bg-black relative">
+      <video ref={videoRef} autoPlay playsInline muted className="absolute inset-0 w-full h-full object-cover" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60"></div>
+
+      {/* Header */}
+      <div className="absolute top-0 left-0 right-0 p-6 flex justify-between items-start z-10">
+        <div className="flex items-center gap-2 bg-black/40 backdrop-blur-md rounded-full px-3 py-1 text-white border border-white/10">
+          <User size={14} className="text-pink-500" />
+          <span className="text-xs font-bold">{viewerCount.toLocaleString()} {t.viewers}</span>
+        </div>
+        <button onClick={() => navigate('home')} className="w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-pink-500 transition-colors">
+          <X size={24} />
+        </button>
       </div>
-      <button onClick={() => navigate('home')} className="w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white">
-        <X size={24} />
-      </button>
-    </div>
 
-    {/* Bottom Overlay for Comments */}
-    <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black via-black/60 to-transparent space-y-4">
-       <div className="h-40 overflow-y-auto space-y-2 no-scrollbar">
-          {[1, 2, 3].map(i => (
-            <div key={i} className={`flex items-start gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
-              <span className="font-black text-xs text-pink-500">User_{i}:</span>
-              <span className="text-xs text-white">WOW! amazing stream! 👑👑👑</span>
-            </div>
-          ))}
-       </div>
-       <div className={`flex gap-2 items-center ${isRtl ? 'flex-row-reverse' : ''}`}>
-          <input
-            type="text"
-            placeholder="Say something..."
-            className={`flex-1 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-4 py-2 text-sm text-white outline-none focus:ring-1 focus:ring-pink-500 ${isRtl ? 'text-right' : ''}`}
-          />
-          <button className="bg-pink-500 text-white p-2 rounded-full"><Gift size={20} /></button>
-       </div>
+      {/* Bottom Overlay for Comments */}
+      <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black via-black/60 to-transparent space-y-4">
+         <div className="h-40 overflow-y-auto space-y-2 no-scrollbar">
+            {[1, 2, 3].map(i => (
+              <div key={i} className={`flex items-start gap-2 animate-in fade-in slide-in-from-left-4 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                <span className="font-black text-xs text-pink-500">User_{i}:</span>
+                <span className="text-xs text-white">WOW! amazing stream! 👑👑👑</span>
+              </div>
+            ))}
+         </div>
+         <div className={`flex gap-2 items-center ${isRtl ? 'flex-row-reverse' : ''}`}>
+            <input
+              type="text"
+              placeholder="Say something..."
+              className={`flex-1 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-4 py-2 text-sm text-white outline-none focus:ring-1 focus:ring-pink-500 ${isRtl ? 'text-right' : ''}`}
+            />
+            <button className="bg-pink-500 text-white p-2 rounded-full active:scale-90 transition-transform"><Gift size={20} /></button>
+            <button
+              onClick={() => setIsMuted(!isMuted)}
+              className={`p-2 rounded-full backdrop-blur-md ${isMuted ? 'bg-pink-500' : 'bg-white/10'} text-white active:scale-90 transition-all`}
+            >
+              {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
+            </button>
+         </div>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default App;
