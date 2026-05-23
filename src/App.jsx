@@ -124,7 +124,16 @@ const translations = {
     adminTitle: "KI👑NG ADMIN PORTAL",
     userManagement: "User Management",
     sendNotification: "Send Push Notification",
-    broadcast: "Broadcast Message"
+    broadcast: "Broadcast Message",
+    discoverWorld: "Discover the World",
+    liveTranslation: "Live Translation",
+    referralCode: "Referral Code",
+    fundingPoints: "Funding Points",
+    referralBonus: "Referral Bonus",
+    inviteFriends: "Invite Friends",
+    fundingActivities: "Funding Activities",
+    dailyCheckIn: "Daily Check-in",
+    travelTheWorld: "Travel the world and meet new people!"
   },
   ar: {
     appTitle: "KING LIVE QUEEN",
@@ -201,7 +210,16 @@ const translations = {
     adminTitle: "بوابة الأدمن للـ KI👑NG",
     userManagement: "إدارة المستخدمين",
     sendNotification: "إرسال إشعار",
-    broadcast: "إرسال الرسالة"
+    broadcast: "إرسال الرسالة",
+    discoverWorld: "اكتشف العالم",
+    liveTranslation: "الترجمة الفورية",
+    referralCode: "رمز الإحالة",
+    fundingPoints: "نقاط التمويل",
+    referralBonus: "مكافأة الإحالة",
+    inviteFriends: "دعوة الأصدقاء",
+    fundingActivities: "نشاطات التمويل",
+    dailyCheckIn: "تسجيل الدخول اليومي",
+    travelTheWorld: "سافر حول العالم وتعرف على أشخاص جدد!"
   }
 };
 
@@ -338,7 +356,7 @@ const NavItem = ({ active, icon, onClick }) => (
 const renderView = (props) => {
   const { view } = props;
   switch (view) {
-    case 'home': return <EmptyState {...props} title={props.t.home} />;
+    case 'home': return <HomeDiscoveryView {...props} />;
     case 'following': return <EmptyState {...props} title={props.t.following} />;
     case 'feed': return <FeedView {...props} />;
     case 'store': return <StoreView {...props} />;
@@ -369,6 +387,60 @@ const EmptyState = ({ t, title }) => (
   </div>
 );
 
+const HomeDiscoveryView = ({ t, isRtl, navigate }) => (
+  <div className="p-4 space-y-6 animate-in fade-in duration-700">
+    {/* Hero Section */}
+    <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-pink-500 via-purple-500 to-indigo-600 p-8 text-white shadow-xl">
+      <div className="relative z-10 space-y-4">
+        <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">
+          <Globe size={12} className="animate-spin-slow" /> {t.discoverWorld}
+        </div>
+        <h2 className="text-3xl font-black italic leading-tight tracking-tighter">
+          {t.travelTheWorld}
+        </h2>
+        <button
+          onClick={() => navigate('stream_setup')}
+          className="bg-white text-pink-500 px-6 py-3 rounded-2xl font-black text-sm shadow-lg active:scale-95 transition-transform uppercase italic"
+        >
+          {t.startLive}
+        </button>
+      </div>
+      <Globe2 size={200} className="absolute -right-10 -bottom-10 text-white/10 rotate-12" />
+    </div>
+
+    {/* Live Now Grid */}
+    <div className="space-y-4">
+      <div className={`flex items-center justify-between ${isRtl ? 'flex-row-reverse' : ''}`}>
+        <h3 className="font-black italic text-lg uppercase tracking-tight">{t.home}</h3>
+        <TrendingUp size={20} className="text-pink-500" />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        {[
+          { name: 'Sarah', country: '🇧🇷 Brazil', viewers: '1.2k', img: 'bg-blue-100' },
+          { name: 'Ahmed', country: '🇪🇬 Egypt', viewers: '850', img: 'bg-green-100' },
+          { name: 'Yuki', country: '🇯🇵 Japan', viewers: '2.4k', img: 'bg-red-100' },
+          { name: 'Elena', country: '🇷🇺 Russia', viewers: '540', img: 'bg-purple-100' },
+        ].map((stream, i) => (
+          <div key={i} className="group relative aspect-[3/4] rounded-3xl overflow-hidden bg-gray-100 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm active:scale-95 transition-transform cursor-pointer" onClick={() => navigate('active_stream')}>
+            <div className={`absolute inset-0 ${stream.img} opacity-20 dark:opacity-10 group-hover:opacity-30 transition-opacity`}></div>
+            <div className="absolute top-3 left-3 bg-black/40 backdrop-blur-md px-2 py-0.5 rounded-full flex items-center gap-1 text-[8px] font-bold text-white">
+              <div className="w-1 h-1 bg-red-500 rounded-full animate-pulse"></div> LIVE
+            </div>
+            <div className="absolute top-3 right-3 bg-black/40 backdrop-blur-md px-2 py-0.5 rounded-full text-[8px] font-bold text-white">
+              {stream.viewers}
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent text-white">
+              <p className="font-bold text-xs">{stream.name}</p>
+              <p className="text-[10px] opacity-70">{stream.country}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
 const FeedView = ({ t, isRtl, showNsfw }) => (
   <div className="p-4 space-y-4 animate-in slide-in-from-bottom-10 duration-500">
     <h2 className="text-2xl font-black italic mb-4">{t.feed}</h2>
@@ -394,22 +466,80 @@ const FeedView = ({ t, isRtl, showNsfw }) => (
 );
 
 const StoreView = ({ t, isRtl, walletBalance }) => (
-  <div className="p-6 space-y-6 animate-in fade-in duration-500">
-    <h2 className="text-2xl font-black italic mb-2">{t.store}</h2>
-    <div className="bg-gradient-to-br from-pink-500 to-purple-600 p-6 rounded-[2.5rem] text-white shadow-xl">
-      <p className="text-white/70 text-xs font-bold uppercase mb-1">{t.walletBalance}</p>
-      <p className="text-4xl font-black italic">{walletBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+  <div className="p-6 pb-24 space-y-8 animate-in fade-in duration-500 overflow-y-auto no-scrollbar max-h-screen">
+    <h2 className={`text-2xl font-black italic mb-2 ${isRtl ? 'text-right' : ''}`}>{t.store}</h2>
+
+    {/* Wallet & Funding Card */}
+    <div className="bg-gradient-to-br from-gray-900 via-pink-600 to-purple-700 p-8 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden">
+      <div className="relative z-10 space-y-6">
+        <div>
+          <p className="text-white/60 text-[10px] font-black uppercase tracking-widest mb-1">{t.walletBalance}</p>
+          <p className="text-4xl font-black italic tracking-tighter">{walletBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+        </div>
+        <div className="flex gap-6 border-t border-white/10 pt-4">
+          <div>
+            <p className="text-white/50 text-[8px] font-bold uppercase">{t.fundingPoints}</p>
+            <p className="text-lg font-black italic">1,250</p>
+          </div>
+          <div>
+            <p className="text-white/50 text-[8px] font-bold uppercase">{t.referralBonus}</p>
+            <p className="text-lg font-black italic">+450</p>
+          </div>
+        </div>
+      </div>
+      <Zap size={150} className="absolute -right-10 -top-10 text-white/5 -rotate-12" />
     </div>
+
+    {/* Referral System */}
+    <div className="bg-pink-50 dark:bg-pink-900/10 p-6 rounded-[2rem] border border-pink-100 dark:border-pink-900/20 space-y-4">
+      <div className={`flex items-center gap-3 ${isRtl ? 'flex-row-reverse text-right' : ''}`}>
+        <div className="w-10 h-10 bg-pink-500 rounded-full flex items-center justify-center text-white shadow-lg"><UsersIcon size={20} /></div>
+        <div>
+          <h3 className="font-black italic text-pink-500 uppercase text-sm leading-tight">{t.referralCode}</h3>
+          <p className="text-[10px] text-gray-500 font-bold uppercase">KING7STAR</p>
+        </div>
+      </div>
+      <button className="w-full bg-white dark:bg-black border-2 border-pink-500 text-pink-500 py-3 rounded-2xl font-black text-xs uppercase italic tracking-widest hover:bg-pink-500 hover:text-white transition-all">
+        {t.inviteFriends}
+      </button>
+    </div>
+
+    {/* Funding Activities */}
     <div className="space-y-4">
-      <h3 className={`font-bold text-lg ${isRtl ? 'text-right' : ''}`}>{t.rechargeOptions}</h3>
+      <h3 className={`font-black italic text-lg uppercase tracking-tight ${isRtl ? 'text-right' : ''}`}>{t.fundingActivities}</h3>
+      <div className="space-y-2">
+        {[
+          { label: t.dailyCheckIn, points: '+10', icon: <CheckCircle2 size={16} />, color: 'text-green-500' },
+          { label: 'Watched Ads', points: '+25', icon: <Video size={16} />, color: 'text-blue-500' },
+          { label: 'Shared Stream', points: '+50', icon: <Rss size={16} />, color: 'text-purple-500' },
+        ].map((act, i) => (
+          <div key={i} className={`bg-gray-50 dark:bg-gray-900 p-4 rounded-2xl flex items-center justify-between border border-gray-100 dark:border-gray-800 ${isRtl ? 'flex-row-reverse' : ''}`}>
+            <div className={`flex items-center gap-3 ${isRtl ? 'flex-row-reverse text-right' : ''}`}>
+              <div className="w-8 h-8 bg-white dark:bg-black rounded-xl flex items-center justify-center shadow-sm text-pink-500">{act.icon}</div>
+              <p className="font-bold text-xs">{act.label}</p>
+            </div>
+            <span className={`font-black italic ${act.color}`}>{act.points}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {/* Recharge Options */}
+    <div className="space-y-4">
+      <h3 className={`font-black italic text-lg uppercase tracking-tight ${isRtl ? 'text-right' : ''}`}>{t.rechargeOptions}</h3>
       <div className="grid grid-cols-1 gap-3">
         {[ { coins: 100, price: '0.99', extra: null }, { coins: 500, price: '4.99', extra: '8%' } ].map((pkg, i) => (
           <div key={i} className={`bg-gray-50 dark:bg-gray-900 p-4 rounded-2xl flex items-center justify-between border border-gray-100 dark:border-gray-800 ${isRtl ? 'flex-row-reverse' : ''}`}>
             <div className={`flex items-center gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
-              <div className="w-10 h-10 bg-yellow-400 rounded-full flex items-center justify-center text-white"><Store size={20} /></div>
-              <div className={isRtl ? 'text-right' : ''}><p className="font-bold">{pkg.coins} Coins</p>{pkg.extra && <span className="text-[10px] bg-pink-500 text-white px-2 py-0.5 rounded-full font-bold">{t.extra} {pkg.extra}</span>}</div>
+              <div className="w-10 h-10 bg-yellow-400 rounded-full flex items-center justify-center text-white shadow-md"><Store size={20} /></div>
+              <div className={isRtl ? 'text-right' : ''}>
+                <p className="font-bold text-sm">{pkg.coins} Coins</p>
+                {pkg.extra && <span className="text-[10px] bg-pink-500 text-white px-2 py-0.5 rounded-full font-bold">{t.extra} {pkg.extra}</span>}
+              </div>
             </div>
-            <button className="bg-white dark:bg-black border border-gray-200 dark:border-gray-700 px-4 py-2 rounded-xl font-bold text-sm">${pkg.price}</button>
+            <button className="bg-white dark:bg-black border border-gray-200 dark:border-gray-700 px-5 py-2.5 rounded-xl font-black text-xs shadow-sm hover:border-pink-500 transition-colors uppercase">
+              ${pkg.price}
+            </button>
           </div>
         ))}
       </div>
@@ -677,7 +807,14 @@ const ConnectingView = ({ t, navigate }) => {
 const ActiveStreamView = ({ t, navigate, isRtl, viewerCount }) => {
   const videoRef = useRef(null);
   const [isMuted, setIsMuted] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
   useEffect(() => { navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(s => { if (videoRef.current) videoRef.current.srcObject = s; }); }, []);
+
+  const mockMessages = [
+    { user: 'Sarah', text: 'Hello from Brazil!', trans: 'مرحباً من البرازيل!' },
+    { user: 'Ahmed', text: 'بث رائع يا بطل!', trans: 'Great stream, hero!' },
+    { user: 'Yuki', text: 'I love this app 🇯🇵', trans: 'أنا أحب هذا التطبيق 🇯🇵' }
+  ];
 
   return (
     <div className="h-screen bg-black relative">
@@ -688,16 +825,38 @@ const ActiveStreamView = ({ t, navigate, isRtl, viewerCount }) => {
           <UserIcon size={14} className="text-pink-500" />
           <span className="text-xs font-bold tracking-tighter">{viewerCount.toLocaleString()} {t.viewers}</span>
         </div>
-        <button onClick={() => navigate('home')} className="w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-pink-500"><X size={24} /></button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setIsTranslating(!isTranslating)}
+            className={`w-10 h-10 backdrop-blur-md rounded-full flex items-center justify-center text-white transition-colors ${isTranslating ? 'bg-pink-500' : 'bg-black/40'}`}
+            title={t.liveTranslation}
+          >
+            <Globe size={20} />
+          </button>
+          <button onClick={() => navigate('home')} className="w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-pink-500"><X size={24} /></button>
+        </div>
       </div>
       <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black via-black/60 to-transparent space-y-4">
-         <div className="h-40 overflow-y-auto space-y-2 no-scrollbar">
-            {[1, 2].map(i => <div key={i} className={`flex items-start gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}><span className="font-black text-xs text-pink-500">User_{i}:</span><span className="text-xs text-white">KING LIVE! 👑👑👑</span></div>)}
+         <div className="h-48 overflow-y-auto space-y-3 no-scrollbar flex flex-col justify-end">
+            {mockMessages.map((msg, i) => (
+              <div key={i} className={`flex flex-col gap-0.5 ${isRtl ? 'items-end' : 'items-start'}`}>
+                <div className={`flex items-center gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                  <span className="font-black text-[10px] text-pink-500 uppercase tracking-tighter">{msg.user}:</span>
+                  <span className="text-xs text-white font-medium">{msg.text}</span>
+                </div>
+                {isTranslating && (
+                  <div className={`flex items-center gap-1.5 opacity-80 animate-in slide-in-from-left-2 duration-300 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                    <span className="text-[9px] bg-pink-500 text-white px-1 rounded font-bold uppercase italic">TR</span>
+                    <span className="text-[11px] text-pink-300 italic font-bold">{msg.trans}</span>
+                  </div>
+                )}
+              </div>
+            ))}
          </div>
          <div className={`flex gap-2 items-center ${isRtl ? 'flex-row-reverse' : ''}`}>
-            <input type="text" placeholder="Say something..." className={`flex-1 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-4 py-2 text-sm text-white outline-none ${isRtl ? 'text-right' : ''}`} />
-            <button className="bg-pink-500 text-white p-2 rounded-full"><Gift size={20} /></button>
-            <button onClick={() => setIsMuted(!isMuted)} className={`p-2 rounded-full backdrop-blur-md ${isMuted ? 'bg-pink-500' : 'bg-white/10'} text-white`}>{isMuted ? <MicOff size={20} /> : <Mic size={20} />}</button>
+            <input type="text" placeholder={isRtl ? "قل شيئاً..." : "Say something..."} className={`flex-1 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-4 py-2.5 text-sm text-white outline-none focus:ring-1 focus:ring-pink-500 ${isRtl ? 'text-right' : ''}`} />
+            <button className="bg-pink-500 text-white p-2.5 rounded-full hover:scale-110 active:scale-95 transition-transform"><Gift size={20} /></button>
+            <button onClick={() => setIsMuted(!isMuted)} className={`p-2.5 rounded-full backdrop-blur-md transition-colors ${isMuted ? 'bg-pink-500' : 'bg-white/10'} text-white`}>{isMuted ? <MicOff size={20} /> : <Mic size={20} />}</button>
          </div>
       </div>
     </div>
@@ -850,47 +1009,86 @@ const StaticPageView = ({ t, navigate, isRtl, showNsfw, setShowNsfw }) => (
 );
 
 const AdminDashboardView = ({ t, navigate, isRtl }) => (
-  <div className="p-6 space-y-8 animate-in slide-in-from-top-10 duration-500">
+  <div className="p-6 pb-24 space-y-8 animate-in slide-in-from-top-10 duration-500 overflow-y-auto no-scrollbar max-h-screen">
+    {/* Header */}
     <div className="bg-pink-500 p-8 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden">
       <div className="relative z-10">
-        <h2 className="text-3xl font-black italic tracking-tighter mb-4">{t.adminTitle}</h2>
-        <div className="flex gap-4">
-          <div className="bg-white/10 backdrop-blur-md px-4 py-2 rounded-xl">
-             <p className="text-[8px] uppercase font-bold opacity-60">Total Users</p>
-             <p className="text-lg font-black italic">124,582</p>
+        <div className="flex justify-between items-start mb-6">
+          <h2 className="text-3xl font-black italic tracking-tighter leading-none">{t.adminTitle}</h2>
+          <button onClick={() => navigate('profile')} className="p-2 bg-white/20 rounded-xl"><X size={20}/></button>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/10">
+             <p className="text-[8px] uppercase font-black opacity-60 tracking-widest mb-1">Total Users</p>
+             <p className="text-xl font-black italic">124,582</p>
           </div>
-          <div className="bg-white/10 backdrop-blur-md px-4 py-2 rounded-xl">
-             <p className="text-[8px] uppercase font-bold opacity-60">Live Now</p>
-             <p className="text-lg font-black italic">1,480</p>
+          <div className="bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/10">
+             <p className="text-[8px] uppercase font-black opacity-60 tracking-widest mb-1">Live Now</p>
+             <p className="text-xl font-black italic">1,480</p>
           </div>
         </div>
       </div>
+      <Shield size={200} className="absolute -right-10 -bottom-10 text-white/5 rotate-12" />
     </div>
 
     <div className="space-y-6">
-       <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-100 dark:border-gray-800 space-y-4">
-          <h3 className="font-bold">{t.userManagement}</h3>
+       {/* Funding & Referral Logs */}
+       <div className="bg-white dark:bg-gray-900 p-6 rounded-[2rem] border border-gray-100 dark:border-gray-800 space-y-4">
+          <div className={`flex items-center justify-between ${isRtl ? 'flex-row-reverse' : ''}`}>
+            <h3 className="font-black italic uppercase text-sm tracking-tight text-pink-500">{t.fundingActivities}</h3>
+            <Zap size={16} className="text-pink-500" />
+          </div>
           <div className="space-y-2">
-            {[1, 2].map(i => (
-              <div key={i} className={`flex items-center justify-between p-3 bg-gray-50 dark:bg-black rounded-2xl ${isRtl ? 'flex-row-reverse' : ''}`}>
-                 <div className={`flex items-center gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
-                   <div className="w-8 h-8 rounded-full bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center font-bold text-pink-500 text-xs">K</div>
-                   <p className="text-xs font-bold">User_{i}</p>
+            {[
+              { user: 'King_99', action: 'Referral Check', points: '+150', time: '2m ago' },
+              { user: 'Queen_Az', action: 'Wallet Top-up', points: '+500', time: '15m ago' },
+              { user: 'Shadow_X', action: 'Daily Bonus', points: '+10', time: '1h ago' }
+            ].map((log, i) => (
+              <div key={i} className={`flex items-center justify-between p-3 bg-gray-50 dark:bg-black rounded-xl ${isRtl ? 'flex-row-reverse' : ''}`}>
+                 <div className={`flex items-center gap-3 ${isRtl ? 'flex-row-reverse text-right' : ''}`}>
+                   <div className="w-8 h-8 rounded-lg bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center font-bold text-pink-500 text-[10px]">{log.user.charAt(0)}</div>
+                   <div>
+                     <p className="text-[10px] font-black">{log.user}</p>
+                     <p className="text-[8px] text-gray-500 uppercase font-bold">{log.action}</p>
+                   </div>
                  </div>
-                 <div className="flex gap-2">
-                    <button className="p-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg"><Settings size={14}/></button>
-                    <button className="p-1.5 bg-red-100 dark:bg-red-900/30 text-red-500 rounded-lg"><Shield size={14}/></button>
+                 <div className="text-right">
+                   <p className="text-[10px] font-black text-green-500 italic">{log.points}</p>
+                   <p className="text-[8px] text-gray-400 font-bold">{log.time}</p>
                  </div>
               </div>
             ))}
           </div>
        </div>
 
-       <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-100 dark:border-gray-800 space-y-4">
-          <h3 className="font-bold">{t.sendNotification}</h3>
-          <input type="text" placeholder="Title" className="w-full bg-gray-50 dark:bg-black border border-gray-100 dark:border-gray-800 rounded-xl p-3 text-xs outline-none" />
-          <textarea placeholder="Message" className="w-full bg-gray-50 dark:bg-black border border-gray-100 dark:border-gray-800 rounded-xl p-3 text-xs outline-none h-24" />
-          <button className="w-full py-3 bg-pink-500 text-white font-bold rounded-xl uppercase text-xs">{t.broadcast}</button>
+       {/* User Management */}
+       <div className="bg-white dark:bg-gray-900 p-6 rounded-[2rem] border border-gray-100 dark:border-gray-800 space-y-4">
+          <h3 className={`font-black italic uppercase text-sm tracking-tight ${isRtl ? 'text-right' : ''}`}>{t.userManagement}</h3>
+          <div className="space-y-2">
+            {[1, 2].map(i => (
+              <div key={i} className={`flex items-center justify-between p-3 bg-gray-50 dark:bg-black rounded-xl ${isRtl ? 'flex-row-reverse' : ''}`}>
+                 <div className={`flex items-center gap-3 ${isRtl ? 'flex-row-reverse text-right' : ''}`}>
+                   <div className="w-8 h-8 rounded-full bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center font-bold text-pink-500 text-xs">K</div>
+                   <p className="text-xs font-bold">User_King_{i}</p>
+                 </div>
+                 <div className="flex gap-2">
+                    <button className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-pink-500/20 transition-colors"><Settings size={14}/></button>
+                    <button className="p-2 bg-red-100 dark:bg-red-900/30 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-colors"><Shield size={14}/></button>
+                 </div>
+              </div>
+            ))}
+          </div>
+       </div>
+
+       {/* Notifications */}
+       <div className="bg-white dark:bg-gray-900 p-6 rounded-[2rem] border border-gray-100 dark:border-gray-800 space-y-4">
+          <div className={`flex items-center gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
+            <Bell size={16} className="text-pink-500" />
+            <h3 className="font-black italic uppercase text-sm tracking-tight">{t.sendNotification}</h3>
+          </div>
+          <input type="text" placeholder="Title" className={`w-full bg-gray-50 dark:bg-black border border-gray-100 dark:border-gray-800 rounded-xl p-3.5 text-xs outline-none focus:ring-1 focus:ring-pink-500 ${isRtl ? 'text-right' : ''}`} />
+          <textarea placeholder="Message" className={`w-full bg-gray-50 dark:bg-black border border-gray-100 dark:border-gray-800 rounded-xl p-3.5 text-xs outline-none h-24 focus:ring-1 focus:ring-pink-500 ${isRtl ? 'text-right' : ''}`} />
+          <button className="w-full py-4 bg-pink-500 text-white font-black rounded-xl uppercase text-xs italic tracking-widest shadow-lg active:scale-95 transition-transform">{t.broadcast}</button>
        </div>
     </div>
   </div>
