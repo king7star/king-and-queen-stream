@@ -3,10 +3,14 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  preview: {
-    allowedHosts: 'all'
-  },
   server: {
-    allowedHosts: 'all'
+    host: true,
+    allowedHosts: true
+  },
+  preview: {
+    host: true,
+    allowedHosts: [
+      'king-live-queen.onrender.com'
+    ]
   }
 })
