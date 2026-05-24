@@ -127,7 +127,15 @@ const AuthView = ({ t, isRtl, setSession }) => {
           redirectTo: window.location.origin,
         },
       });
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes('not enabled')) {
+          alert(isRtl
+            ? 'عذراً، يجب تفعيل تسجيل الدخول بجوجل من لوحة تحكم Supabase أولاً (Authentication > Providers > Google)'
+            : 'Google login is not enabled yet. Please enable it in your Supabase Dashboard (Authentication > Providers > Google)');
+          return;
+        }
+        throw error;
+      }
     } catch (err) {
       alert(isRtl ? `خطأ في تسجيل الدخول بـ Google: ${err.message}` : `Google login error: ${err.message}`);
     }
