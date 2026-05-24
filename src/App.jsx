@@ -54,13 +54,17 @@ const App = () => {
 
   const fetchUserData = async (userId) => {
     const { data: prof } = await supabase.from('profiles').select('*').eq('id', userId).single();
-    const { data: wall } = await supabase.from('wallets').select('*').eq('id', userId).single();
-    if (prof) setProfile(prof);
-    if (wall) setWallet(wall);
+    if (prof) {
+      setProfile(prof);
+      setWallet({ balance: prof.balance || 0, points: prof.points || 0 });
+    }
 
-    // Setup Realtime
-    supabase.channel('wallet_changes').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'wallets', filter: `id=eq.${userId}` },
-      payload => setWallet(payload.new)
+    // Setup Realtime on profiles table now
+    supabase.channel('profile_changes').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` },
+      payload => {
+        setProfile(payload.new);
+        setWallet({ balance: payload.new.balance || 0, points: payload.new.points || 0 });
+      }
     ).subscribe();
   };
 
