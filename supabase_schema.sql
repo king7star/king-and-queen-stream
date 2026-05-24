@@ -28,16 +28,30 @@ CREATE POLICY "Users can update own profile." ON public.profiles FOR UPDATE USIN
 -- ROBUST TRIGGER FUNCTION
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
+DECLARE
+  base_username TEXT;
+  final_username TEXT;
 BEGIN
+  base_username := COALESCE(NEW.raw_user_meta_data->>'username', 'user_' || SUBSTRING(NEW.id::TEXT FROM 1 FOR 8));
+  final_username := base_username;
+
+  -- Ensure username uniqueness to prevent signup failure
+  IF EXISTS (SELECT 1 FROM public.profiles WHERE username = final_username) THEN
+    final_username := base_username || '_' || SUBSTRING(NEW.id::TEXT FROM 1 FOR 4);
+  END IF;
+
   INSERT INTO public.profiles (id, email, username, balance, points)
   VALUES (
     NEW.id,
     NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'username', 'user_' || SUBSTRING(NEW.id::TEXT FROM 1 FOR 8)),
+    final_username,
     3410.00,
     1500
   )
-  ON CONFLICT (id) DO NOTHING;
+  ON CONFLICT (id) DO UPDATE SET
+    email = EXCLUDED.email,
+    username = COALESCE(profiles.username, EXCLUDED.username);
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
