@@ -120,6 +120,7 @@ const AuthView = ({ t, isRtl, setSession }) => {
 
   const handleAuth = async (e) => {
     e.preventDefault();
+    console.log("handleAuth triggered", { isLogin, email, username });
     if (!email || !password || (!isLogin && !username)) {
       alert(isRtl ? 'يرجى إدخال كافة البيانات المطلوبة' : 'Please enter all required fields');
       return;
@@ -128,17 +129,23 @@ const AuthView = ({ t, isRtl, setSession }) => {
     setMessage(null);
     try {
       console.log(`Attempting ${isLogin ? 'Login' : 'Signup'} for ${email}`);
+      const authOptions = isLogin ? { email, password } : {
+        email,
+        password,
+        options: {
+          emailRedirectTo: window.location.origin,
+          data: {
+            username: username.trim(),
+            full_name: username.trim(),
+          }
+        }
+      };
+
       const { error, data } = isLogin
         ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-              data: {
-                username: username.trim() || email.split('@')[0],
-              }
-            }
-          });
+        : await supabase.auth.signUp(authOptions);
+
+      console.log("Supabase response:", { error, data });
 
       if (error) {
         console.error("Supabase Auth Error:", error);
