@@ -65,15 +65,15 @@ const App = () => {
   };
 
   if (loading) return <div className="h-screen bg-black flex items-center justify-center text-pink-500 font-black italic animate-pulse text-2xl">KI👑NG LIVE...</div>;
-  if (!session) return <AuthView t={t} isRtl={isRtl} />;
+  if (!session) return <AuthView t={t} isRtl={isRtl} setSession={setSession} />;
 
   const navigate = (v) => setView(v);
   const isFullscreen = ['stream_setup', 'connecting', 'active_stream'].includes(view);
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${isRtl ? 'rtl' : 'ltr'} bg-white dark:bg-black text-black dark:text-white font-sans overflow-x-hidden`}>
+    <div className={`min-h-screen transition-colors duration-300 ${isRtl ? 'rtl' : 'ltr'} bg-background-light dark:bg-background-dark text-black dark:text-white font-sans overflow-x-hidden`}>
       {!isFullscreen && (
-        <nav className="fixed top-0 left-0 right-0 z-40 bg-white/90 dark:bg-black/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 px-4 h-14 flex items-center justify-between">
+        <nav className="fixed top-0 left-0 right-0 z-40 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 px-4 h-14 flex items-center justify-between">
           <div className="text-xl font-black italic tracking-tighter text-pink-500 cursor-pointer" onClick={() => navigate('admin')}>
             {t.appTitle}
           </div>
@@ -92,7 +92,7 @@ const App = () => {
       </main>
 
       {!isFullscreen && (
-        <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-black border-t border-gray-200 dark:border-gray-800 px-6 h-16 flex items-center justify-between">
+        <nav className="fixed bottom-0 left-0 right-0 z-40 bg-background-light dark:bg-background-dark border-t border-gray-200 dark:border-gray-800 px-6 h-16 flex items-center justify-between">
           <NavItem active={view === 'home'} icon={<Layout size={24} />} onClick={() => navigate('home')} />
           <NavItem active={view === 'following'} icon={<Heart size={24} />} onClick={() => navigate('following')} />
           <NavItem active={view === 'feed'} icon={<Rss size={24} />} onClick={() => navigate('feed')} />
@@ -106,7 +106,7 @@ const App = () => {
   );
 };
 
-const AuthView = ({ t, isRtl }) => {
+const AuthView = ({ t, isRtl, setSession }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -115,6 +115,10 @@ const AuthView = ({ t, isRtl }) => {
 
   const handleAuth = async (e) => {
     e.preventDefault();
+    if (!email || !password) {
+      alert(isRtl ? 'يرجى إدخال البريد الإلكتروني وكلمة المرور' : 'Please enter email and password');
+      return;
+    }
     setLoading(true);
     setMessage(null);
     try {
@@ -123,11 +127,16 @@ const AuthView = ({ t, isRtl }) => {
         : await supabase.auth.signUp({ email, password });
 
       if (error) {
+        console.error("Supabase Auth Error:", error);
+        alert(`Supabase Error: ${error.message}`);
         setMessage({ type: 'error', text: error.message });
-      } else if (!isLogin && data?.user && data?.session === null) {
+      } else if (!isLogin && data?.user && !data?.session) {
+        alert(isRtl ? 'تم إنشاء الحساب! يرجى تفعيل بريدك الإلكتروني' : 'Account created! Please verify your email');
         setMessage({ type: 'success', text: isRtl ? 'تم إرسال بريد تأكيد، يرجى تفعيله!' : 'Confirmation email sent, please verify!' });
       }
     } catch (err) {
+      console.error("Critical Auth Exception:", err);
+      alert(`System Error: ${err.message}`);
       setMessage({ type: 'error', text: err.message });
     } finally {
       setLoading(false);
@@ -151,6 +160,7 @@ const AuthView = ({ t, isRtl }) => {
           <button className="w-full py-4 bg-pink-500 rounded-2xl font-black italic uppercase tracking-tighter text-lg shadow-xl shadow-pink-500/20 active:scale-95 transition-all">{loading ? '...' : (isLogin ? t.login : t.signup)}</button>
        </form>
        <button onClick={() => setIsLogin(!isLogin)} className="mt-6 text-gray-400 text-sm font-bold">{isLogin ? t.noAccount : t.haveAccount}</button>
+       <button onClick={() => setSession({ user: { id: 'guest' } })} className="mt-2 text-pink-500/50 text-xs font-bold italic uppercase tracking-widest hover:text-pink-500 transition-colors">{isRtl ? 'دخول كزائر' : 'Continue as Guest'}</button>
     </div>
   );
 };
