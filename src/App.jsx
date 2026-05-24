@@ -35,6 +35,7 @@ const App = () => {
   const t = translations[lang];
   const isRtl = lang === 'ar';
   const isAdmin = profile?.is_admin || false;
+  const isGuest = session?.user?.id === '00000000-0000-0000-0000-000000000000';
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -92,7 +93,7 @@ const App = () => {
       )}
 
       <main className={`${!isFullscreen ? 'pt-14 pb-20' : ''} min-h-screen`}>
-        {renderView({ view, navigate, t, isRtl, setLang, profile, setProfile, unreadMessages, showNsfw, setShowNsfw, wallet, viewerCount, setShowLogout, isAdmin })}
+        {renderView({ view, navigate, t, isRtl, setLang, profile, setProfile, unreadMessages, showNsfw, setShowNsfw, wallet, viewerCount, setShowLogout, isAdmin, isGuest })}
       </main>
 
       {!isFullscreen && (
@@ -415,22 +416,32 @@ const SettingsItem = ({ icon, label, onClick, isRtl }) => (
   </button>
 );
 
-const EditProfileView = ({ t, navigate, isRtl, profile, setProfile }) => {
+const EditProfileView = ({ t, navigate, isRtl, profile, setProfile, isGuest }) => {
   const [formData, setFormData] = useState(profile || { username: '', gender: 'Male', birth_date: '', location: '', bio: '' });
   const [isSaved, setIsSaved] = useState(false);
   const [uploading, setUploading] = useState(false);
 
   const handleSave = async () => {
+    if (isGuest) {
+      alert(isRtl ? 'عذراً، يجب تسجيل الدخول لحفظ التغييرات' : 'Sorry, you must be logged in to save changes');
+      return;
+    }
     const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
     const { error } = await supabase.from('profiles').upsert({ id: user.id, ...formData, updated_at: new Date() });
     if (!error) { setProfile(formData); setIsSaved(true); setTimeout(() => setIsSaved(false), 2000); }
   };
 
   const uploadAvatar = async (e) => {
+    if (isGuest) {
+      alert(isRtl ? 'عذراً، يجب إنشاء حساب لرفع الصور' : 'Sorry, you must create an account to upload photos');
+      return;
+    }
     try {
       setUploading(true);
       const file = e.target.files[0];
       const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
       const fileExt = file.name.split('.').pop();
       const filePath = `${user.id}-${Math.random()}.${fileExt}`;
       let { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file);
@@ -482,7 +493,7 @@ const EditInput = ({ label, value, type = "text", onChange, isRtl, icon }) => (
   </div>
 );
 
-const StreamSetupView = ({ t, navigate, isRtl, showNsfw, setShowNsfw }) => {
+const StreamSetupView = ({ t, navigate, isRtl, showNsfw, setShowNsfw, isGuest }) => {
   const videoRef = useRef(null);
   const [stream, setStream] = useState(null);
   const [isMuted, setIsMuted] = useState(false);
@@ -563,7 +574,20 @@ const StreamSetupView = ({ t, navigate, isRtl, showNsfw, setShowNsfw }) => {
             <p className="text-[10px] text-white/50">{t.nsfwNote}</p>
          </div>
       </div>
-      <div className="absolute bottom-6 left-6 right-6 z-20"><button onClick={() => navigate('connecting')} className="w-full bg-pink-500 text-white font-black py-4 rounded-2xl shadow-xl shadow-pink-500/30 uppercase italic tracking-widest animate-pulse">{t.start}</button></div>
+      <div className="absolute bottom-6 left-6 right-6 z-20">
+        <button
+          onClick={() => {
+            if (isGuest) {
+              alert(isRtl ? 'يجب تسجيل الدخول لبدء بث مباشر' : 'You must log in to start a live stream');
+              return;
+            }
+            navigate('connecting');
+          }}
+          className="w-full bg-pink-500 text-white font-black py-4 rounded-2xl shadow-xl shadow-pink-500/30 uppercase italic tracking-widest animate-pulse"
+        >
+          {t.start}
+        </button>
+      </div>
     </div>
   );
 };
