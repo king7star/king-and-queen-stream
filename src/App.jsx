@@ -114,13 +114,14 @@ const AuthView = ({ t, isRtl, setSession }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
 
   const handleAuth = async (e) => {
     e.preventDefault();
-    if (!email || !password) {
-      alert(isRtl ? 'يرجى إدخال البريد الإلكتروني وكلمة المرور' : 'Please enter email and password');
+    if (!email || !password || (!isLogin && !username)) {
+      alert(isRtl ? 'يرجى إدخال كافة البيانات المطلوبة' : 'Please enter all required fields');
       return;
     }
     setLoading(true);
@@ -133,7 +134,7 @@ const AuthView = ({ t, isRtl, setSession }) => {
             password,
             options: {
               data: {
-                username: email.split('@')[0],
+                username: username || email.split('@')[0],
               }
             }
           });
@@ -167,6 +168,9 @@ const AuthView = ({ t, isRtl, setSession }) => {
          </div>
        )}
        <form onSubmit={handleAuth} className="w-full max-w-sm space-y-4">
+          {!isLogin && (
+            <input type="text" placeholder={isRtl ? 'اسم المستخدم' : 'Username'} className="w-full bg-gray-900 border border-gray-800 rounded-2xl p-4 outline-none focus:ring-1 focus:ring-pink-500" value={username} onChange={e => setUsername(e.target.value)} />
+          )}
           <input type="email" placeholder={t.email} className="w-full bg-gray-900 border border-gray-800 rounded-2xl p-4 outline-none focus:ring-1 focus:ring-pink-500" value={email} onChange={e => setEmail(e.target.value)} />
           <input type="password" placeholder={t.password} className="w-full bg-gray-900 border border-gray-800 rounded-2xl p-4 outline-none focus:ring-1 focus:ring-pink-500" value={password} onChange={e => setPassword(e.target.value)} />
           <button className="w-full py-4 bg-pink-500 rounded-2xl font-black italic uppercase tracking-tighter text-lg shadow-xl shadow-pink-500/20 active:scale-95 transition-all">{loading ? '...' : (isLogin ? t.login : t.signup)}</button>
