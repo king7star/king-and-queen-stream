@@ -127,6 +127,7 @@ const AuthView = ({ t, isRtl, setSession }) => {
     setLoading(true);
     setMessage(null);
     try {
+      console.log(`Attempting ${isLogin ? 'Login' : 'Signup'} for ${email}`);
       const { error, data } = isLogin
         ? await supabase.auth.signInWithPassword({ email, password })
         : await supabase.auth.signUp({
@@ -134,22 +135,30 @@ const AuthView = ({ t, isRtl, setSession }) => {
             password,
             options: {
               data: {
-                username: username || email.split('@')[0],
+                username: username.trim() || email.split('@')[0],
               }
             }
           });
 
       if (error) {
         console.error("Supabase Auth Error:", error);
-        alert(`Supabase Error: ${error.message}`);
+        alert(isRtl ? `خطأ من سوبابيس: ${error.message}` : `Supabase Error: ${error.message}`);
         setMessage({ type: 'error', text: error.message });
-      } else if (!isLogin && data?.user && !data?.session) {
-        alert(isRtl ? 'تم إنشاء الحساب! يرجى تفعيل بريدك الإلكتروني' : 'Account created! Please verify your email');
+      } else if (data?.session) {
+        // Explicitly set session for immediate UI update
+        console.log("Auth Successful, session created.");
+        setSession(data.session);
+      } else if (!isLogin && data?.user) {
+        // User created but no session -> Email confirmation likely required
+        console.log("Signup Successful, confirmation required.");
+        alert(isRtl ? 'تم إنشاء الحساب بنجاح! يرجى التحقق من بريدك الإلكتروني لتفعيله' : 'Account created successfully! Please check your email to verify it');
         setMessage({ type: 'success', text: isRtl ? 'تم إرسال بريد تأكيد، يرجى تفعيله!' : 'Confirmation email sent, please verify!' });
+      } else {
+        console.warn("Auth finished with no error, no session, and no user data:", data);
       }
     } catch (err) {
       console.error("Critical Auth Exception:", err);
-      alert(`System Error: ${err.message}`);
+      alert(isRtl ? `خطأ في النظام: ${err.message}` : `System Error: ${err.message}`);
       setMessage({ type: 'error', text: err.message });
     } finally {
       setLoading(false);
