@@ -124,7 +124,15 @@ const AuthView = ({ t, isRtl, setSession }) => {
     try {
       const { error, data } = isLogin
         ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({ email, password });
+        : await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              data: {
+                username: email.split('@')[0],
+              }
+            }
+          });
 
       if (error) {
         console.error("Supabase Auth Error:", error);
@@ -160,7 +168,7 @@ const AuthView = ({ t, isRtl, setSession }) => {
           <button className="w-full py-4 bg-pink-500 rounded-2xl font-black italic uppercase tracking-tighter text-lg shadow-xl shadow-pink-500/20 active:scale-95 transition-all">{loading ? '...' : (isLogin ? t.login : t.signup)}</button>
        </form>
        <button onClick={() => setIsLogin(!isLogin)} className="mt-6 text-gray-400 text-sm font-bold">{isLogin ? t.noAccount : t.haveAccount}</button>
-       <button onClick={() => setSession({ user: { id: 'guest' } })} className="mt-2 text-pink-500/50 text-xs font-bold italic uppercase tracking-widest hover:text-pink-500 transition-colors">{isRtl ? 'دخول كزائر' : 'Continue as Guest'}</button>
+       <button onClick={() => setSession({ user: { id: '00000000-0000-0000-0000-000000000000' } })} className="mt-2 text-pink-500/50 text-xs font-bold italic uppercase tracking-widest hover:text-pink-500 transition-colors">{isRtl ? 'دخول كزائر' : 'Continue as Guest'}</button>
     </div>
   );
 };
