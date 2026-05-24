@@ -9,8 +9,6 @@ export default defineConfig({
   },
   preview: {
     host: true,
-    allowedHosts: [
-      'king-live-queen.onrender.com'
-    ]
+    allowedHosts: true
   }
 })
