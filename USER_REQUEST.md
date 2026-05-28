@@ -1,15 +1,20 @@
-The user has requested the following:
+# KING - Luxury Virtual Travel & Messaging Platform
 
-Act as a senior Full-Stack developer. I need you to automatically generate and write all the missing source files for my streaming application "KING LIVE QUEEN" directly into my GitHub repository.
+## Project Status: Production-Ready (Beta Phase)
 
-Please create and populate the following structure with complete, production-ready code:
-1. package.json: Include all necessary dependencies for a modern web streaming app (Node.js/Vite, TailwindCSS, Supabase client, and Lucide icons).
-2. index.html: The main entry point with proper meta tags and Tailwind integration.
-3. src/main.js: Initialize the application and connect it to the Supabase environment variables from .env.
-4. src/App.jsx (or .js): Build the full interface containing:
-- Modern Dark-Themed Live Streaming UI.
-- Dual-language support (Arabic/English) with a toggle button.
-- User wallet with a Point-Based Referral & Funding system ("تمويل").
-- A secure Admin Dashboard (بوابة الأدمن للـ KI👑NG) to manage users, control live streams, view funding activities, and send push notifications.
+### Core Features Implemented:
+- **Luxury Branding**: Dark blue and gold theme with "Boarding Gate" aesthetic.
+- **Dynamic Auth**: Support for Email, Phone, and Username login. Specific support for demo accounts (`king_dev`). Integrated Google OAuth.
+- **Flight Simulation Messaging**: 3-stage interactive animation (Takeoff, Cloud Cruising with facts, Landing).
+- **Media Messaging**: Integrated Supabase Storage for sharing photos and videos in chat.
+- **Interactive Gift System**: 22 unique luxury terminal gifts with atomic mile transactions.
+- **Admin Control Tower**: Live Passenger Manifest search, real-time funding approval system, and global bilingual broadcasts.
+- **Account Protection**: Strict rate limits for profile updates (Avatar: 1/day, Name: 1/week, Username: 1/month).
+- **Bilingual Support**: Full Arabic and English translations with RTL/LTR layout switching.
+- **Interactive Map**: Map view with translated destinations and local cultural information.
 
-Write the files completely without placeholders. Once generated, commit and push them directly to my branch so the workspace is ready.
+### Technical Stack:
+- **Frontend**: React + Vite + Tailwind CSS.
+- **Backend**: Supabase (Auth, Database, Storage, Realtime).
+- **Database Logic**: PostgreSQL triggers and RPC functions for atomic transactions and automatic profile creation.
+- **Deployment**: Configured for Render.com with custom host and port settings.
