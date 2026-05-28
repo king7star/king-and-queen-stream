@@ -225,21 +225,31 @@ const AuthView = ({ t, isRtl, setSession, setLang, lang }) => {
     setLoading(true);
     try {
       let email = id;
+
+      // 1. Resolve Demo/Username to Email if needed
       if (id === 'king_dev') email = 'king@gmail.com';
-      if (id === 'alghbsi') email = 'captain@gmail.com';
+      else if (id === 'alghbsi') email = 'captain@gmail.com';
+      else if (!id.includes('@')) {
+        // Assume ID is a username or phone, try to find the email
+        const { data: profileData } = await supabase.from('profiles').select('email').or(`username.eq.${id},phone.eq.${id}`).maybeSingle();
+        if (profileData?.email) email = profileData.email;
+      }
 
       const { error, data } = isLogin
         ? await supabase.auth.signInWithPassword({ email, password })
         : await supabase.auth.signUp({
             email, password,
-            options: { data: { username: username || id, full_name: username || id } }
+            options: {
+              emailRedirectTo: window.location.origin,
+              data: { username: username || id, full_name: username || id }
+            }
           });
 
       if (error) throw error;
       if (data.session) setSession(data.session);
-      else if (!isLogin) alert(isRtl ? 'تم إنشاء الحساب! يرجى التفعيل' : 'Account created! Please verify email');
+      else if (!isLogin) alert(isRtl ? 'تم إنشاء الحساب بنجاح! يرجى تفعيل بريدك الإلكتروني' : 'Account created! Please check your email to verify');
     } catch (err) {
-      alert(err.message);
+      alert(isRtl ? `خطأ: ${err.message}` : `Error: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -247,6 +257,14 @@ const AuthView = ({ t, isRtl, setSession, setLang, lang }) => {
 
   const handleGoogle = async () => {
     await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
+  };
+
+  const handlePhoneLogin = async () => {
+    const phone = prompt(isRtl ? 'أدخل رقم الهاتف (مع رمز الدولة):' : 'Enter phone number (with country code):');
+    if (!phone) return;
+    const { error } = await supabase.auth.signInWithOtp({ phone });
+    if (error) alert(error.message);
+    else alert(isRtl ? 'تم إرسال رمز التحقق إلى هاتفك' : 'Verification code sent to your phone');
   };
 
   return (
@@ -272,7 +290,7 @@ const AuthView = ({ t, isRtl, setSession, setLang, lang }) => {
           <button onClick={handleGoogle} className="w-full py-4 bg-white text-black rounded-2xl font-bold flex items-center justify-center gap-3 active:scale-95 transition-all text-sm">
              <img src="https://www.google.com/favicon.ico" className="w-4 h-4" /> {t.googleLogin}
           </button>
-          <button className="w-full py-4 bg-king-blue-light border border-king-gold/20 text-king-gold rounded-2xl font-bold flex items-center justify-center gap-3 active:scale-95 transition-all text-sm">
+          <button onClick={handlePhoneLogin} className="w-full py-4 bg-king-blue-light border border-king-gold/20 text-king-gold rounded-2xl font-bold flex items-center justify-center gap-3 active:scale-95 transition-all text-sm">
              <Phone size={18} /> {t.phoneLogin}
           </button>
           <button onClick={() => setSession({ user: { id: '00000000-0000-0000-0000-000000000000' } })} className="w-full py-2 text-king-gold/40 font-bold uppercase text-[10px] tracking-widest hover:text-king-gold transition-colors">{t.guestLogin}</button>
