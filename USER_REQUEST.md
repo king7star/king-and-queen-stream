@@ -1,18 +1,20 @@
-# KING - Virtual Travel & Messaging Application
+# KING - Luxury Virtual Travel & Messaging Platform
 
-## Project Requirements
-- Luxury, modern dark blue and gold color scheme ("Boarding Gate" style).
-- Multiple Login Options: Google, Email/Username, Phone.
-- Dual-language support (Arabic & English) with instant toggle.
-- Map with dynamic translation of place names and cultural info.
-- Demo Accounts:
-  - Admin: `king_dev` / `king2024`
-  - Captain: `alghbsi` / `password123`
-- Messaging with 3-stage interactive Flight Simulation (Takeoff, Cruising, Landing).
-- **Luxury Gift System**: 22 unique terminal gifts (💎, 👑, 🪼, etc.) integrated into Live Flights and Messaging.
-- **Atomic Transactions**: Gifts automatically deduct miles from the sender and credit them to the captain via secure database RPC.
-- Real-time automatic translation of incoming messages.
-- Server-side rate limits on profile updates (Avatar: 1/day, Name: 1/week, Username: 1/month).
-- "Collect" menu merging daily rewards and referrals.
-- Beta Mode: 100% free with funding requests for miles.
-- Admin Control Tower: Passenger search, funding approval, and global bilingual broadcast.
+## Project Status: Production-Ready (Beta Phase)
+
+### Core Features Implemented:
+- **Luxury Branding**: Dark blue and gold theme with "Boarding Gate" aesthetic.
+- **Dynamic Auth**: Support for Email, Phone, and Username login. Specific support for demo accounts (`king_dev`). Integrated Google OAuth.
+- **Flight Simulation Messaging**: 3-stage interactive animation (Takeoff, Cloud Cruising with facts, Landing).
+- **Media Messaging**: Integrated Supabase Storage for sharing photos and videos in chat.
+- **Interactive Gift System**: 22 unique luxury terminal gifts with atomic mile transactions.
+- **Admin Control Tower**: Live Passenger Manifest search, real-time funding approval system, and global bilingual broadcasts.
+- **Account Protection**: Strict rate limits for profile updates (Avatar: 1/day, Name: 1/week, Username: 1/month).
+- **Bilingual Support**: Full Arabic and English translations with RTL/LTR layout switching.
+- **Interactive Map**: Map view with translated destinations and local cultural information.
+
+### Technical Stack:
+- **Frontend**: React + Vite + Tailwind CSS.
+- **Backend**: Supabase (Auth, Database, Storage, Realtime).
+- **Database Logic**: PostgreSQL triggers and RPC functions for atomic transactions and automatic profile creation.
+- **Deployment**: Configured for Render.com with custom host and port settings.

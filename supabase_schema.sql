@@ -1,6 +1,6 @@
--- KING APPLICATION SCHEMA (Consolidated)
+-- KING APPLICATION SCHEMA (Comprehensive & Optimized)
 
--- Profiles table with rate limiting and miles
+-- Profiles table with rate limiting and digital currency (Miles)
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
   email TEXT,
@@ -11,10 +11,10 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   role TEXT DEFAULT 'user', -- 'user', 'captain', 'admin'
   miles DECIMAL(12,2) DEFAULT 1000.00,
 
-  -- Rate limiting timestamps
-  last_avatar_update TIMESTAMP WITH TIME ZONE,
-  last_name_update TIMESTAMP WITH TIME ZONE,
-  last_username_update TIMESTAMP WITH TIME ZONE,
+  -- Rate limiting timestamps for account protection
+  last_avatar_update TIMESTAMP WITH TIME ZONE DEFAULT (NOW() - INTERVAL '2 days'),
+  last_name_update TIMESTAMP WITH TIME ZONE DEFAULT (NOW() - INTERVAL '8 days'),
+  last_username_update TIMESTAMP WITH TIME ZONE DEFAULT (NOW() - INTERVAL '32 days'),
 
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -29,7 +29,8 @@ CREATE TABLE IF NOT EXISTS public.messages (
   original_content TEXT,
   original_lang TEXT,
   media_url TEXT,
-  media_type TEXT, -- 'photo', 'video'
+  media_type TEXT, -- 'photo', 'video', 'gift'
+  gift_id TEXT,
 
   -- Flight state for simulation
   flight_state TEXT DEFAULT 'arrived', -- 'takeoff', 'cruising', 'landing', 'arrived'
@@ -39,7 +40,7 @@ CREATE TABLE IF NOT EXISTS public.messages (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Funding requests for free miles
+-- Funding requests for free miles (Beta Phase)
 CREATE TABLE IF NOT EXISTS public.funding_requests (
   id BIGSERIAL PRIMARY KEY,
   user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -72,6 +73,30 @@ CREATE POLICY "Users can send messages" ON public.messages FOR INSERT WITH CHECK
 ALTER TABLE public.funding_requests ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can view own requests" ON public.funding_requests FOR SELECT USING (auth.uid() = user_id OR EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
 CREATE POLICY "Users can create requests" ON public.funding_requests FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+-- ATOMIC GIFT TRANSACTION FUNCTION
+CREATE OR REPLACE FUNCTION public.transfer_miles_gift(sender_uuid UUID, recipient_uuid UUID, amount DECIMAL, g_id TEXT)
+RETURNS VOID AS $$
+BEGIN
+  -- Deduct from sender if they have enough
+  UPDATE public.profiles
+  SET miles = miles - amount
+  WHERE id = sender_uuid AND miles >= amount;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Insufficient balance';
+  END IF;
+
+  -- Add to recipient
+  UPDATE public.profiles
+  SET miles = miles + amount
+  WHERE id = recipient_uuid;
+
+  -- Log as a gift message
+  INSERT INTO public.messages (sender_id, receiver_id, content, media_type, gift_id, flight_state)
+  VALUES (sender_uuid, recipient_uuid, 'GIFT_SENT', 'gift', g_id, 'arrived');
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- TRIGGER: AUTOMATIC PROFILE CREATION
 CREATE OR REPLACE FUNCTION public.handle_new_user()

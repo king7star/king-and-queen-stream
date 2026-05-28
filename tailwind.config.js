@@ -8,25 +8,15 @@ export default {
   theme: {
     extend: {
       colors: {
-        king: {
-          blue: {
-            DEFAULT: '#0A192F',
-            light: '#112240',
-            deep: '#020C1B',
-          },
-          gold: {
-            DEFAULT: '#D4AF37',
-            light: '#F4D03F',
-            dim: '#996515',
-          }
+        primary: {
+          DEFAULT: '#E91E63',
+          dark: '#C2185B',
+          light: '#F06292',
         },
         background: {
-          dark: '#0A192F',
+          dark: '#121212',
           light: '#F5F5F5',
         }
-      },
-      fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
       },
     },
   },
