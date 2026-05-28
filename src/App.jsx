@@ -81,6 +81,7 @@ const App = () => {
   const [lang, setLang] = useState('ar');
   const [view, setView] = useState('home');
   const [profile, setProfile] = useState(null);
+  const [selectedRecipient, setSelectedRecipient] = useState(null);
   const [isFlightActive, setIsFlightActive] = useState(false);
   const [flightStage, setFlightStage] = useState(0);
   const [currentMessage, setCurrentMessage] = useState(null);
@@ -145,7 +146,8 @@ const App = () => {
 
   if (!session) return <AuthView t={t} isRtl={isRtl} setSession={setSession} setLang={setLang} lang={lang} />;
 
-  const triggerFlight = (msg, destination = 'Dubai') => {
+  const triggerFlight = (msg, recipient = null, destination = 'Dubai') => {
+    if (recipient && typeof recipient === 'object') setSelectedRecipient(recipient);
     setCurrentMessage({ text: msg, destination });
     setIsFlightActive(true);
     setFlightStage(0);
@@ -175,7 +177,11 @@ const App = () => {
           )}
           <Header t={t} profile={profile} setView={setView} isRtl={isRtl} />
           <main className="pb-24 pt-16 px-4 max-w-lg mx-auto">
-            {renderView({ view, setView, t, isRtl, profile, triggerFlight, setLang, lang, handleSendGift })}
+            {renderView({
+              view, setView, t, isRtl, profile, triggerFlight,
+              setLang, lang, handleSendGift,
+              selectedRecipient, setSelectedRecipient
+            })}
           </main>
           <Navbar view={view} setView={setView} t={t} />
         </>
@@ -370,71 +376,100 @@ const renderView = (props) => {
   }
 };
 
-const HomeView = ({ t, triggerFlight, setView }) => (
-  <div className="space-y-8 animate-in fade-in duration-500">
-     <div className="bg-king-gold p-8 rounded-[2.5rem] text-king-blue shadow-2xl shadow-king-gold/20 relative overflow-hidden group">
-        <Plane size={120} className="absolute -right-8 -top-8 text-king-blue-deep/5 -rotate-12 group-hover:translate-x-4 transition-transform" />
-        <h2 className="text-4xl font-black italic tracking-tighter mb-2 uppercase">{t.appTitle} Radar</h2>
-        <div className="flex justify-between items-end">
-           <p className="text-king-blue/60 font-bold text-xs uppercase tracking-widest">Active Flights: 1,482</p>
-           <button onClick={() => setView('live')} className="bg-king-blue text-king-gold px-4 py-2 rounded-xl font-black italic text-[10px] uppercase shadow-lg shadow-black/20 flex items-center gap-2 active:scale-95 transition-all"><Radio size={12}/> Live Flight</button>
-        </div>
-     </div>
+const HomeView = ({ t, triggerFlight, setView }) => {
+  const [passengers, setPassengers] = useState([]);
 
-     <div className="space-y-4">
-        <h3 className="font-black italic uppercase text-king-gold flex items-center gap-2"><Navigation size={18}/> Live Manifest</h3>
-        {[
-          {id: 1, name: 'Passenger_1', dest: 'Tokyo'},
-          {id: 2, name: 'Passenger_2', dest: 'Paris'},
-          {id: 3, name: 'Passenger_3', dest: 'Cairo'}
-        ].map(p => (
-          <div key={p.id} onClick={() => triggerFlight(`Hello from ${p.name}`, p.dest)} className="bg-king-blue-light border border-king-gold/10 p-4 rounded-2xl flex items-center justify-between hover:border-king-gold/50 transition-all cursor-pointer">
-             <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-king-blue flex items-center justify-center font-black text-king-gold">{p.name[0]}</div>
-                <div><p className="font-bold text-sm">{p.name}</p><p className="text-[10px] text-king-gold/50 uppercase">Flying to {p.dest}</p></div>
-             </div>
-             <ChevronRight size={18} className="text-king-gold/30" />
-          </div>
-        ))}
-     </div>
-  </div>
-);
+  useEffect(() => {
+    supabase.from('profiles').select('id, username, role').limit(5)
+      .then(({data}) => data && setPassengers(data));
+  }, []);
 
-const ChatListView = ({ setView, t }) => (
-  <div className="space-y-4">
-     <h2 className="text-2xl font-black italic uppercase text-king-gold">{t.chat}</h2>
-     {[1, 2].map(i => (
-       <div key={i} onClick={() => setView('chat_detail')} className="p-4 bg-king-blue-light rounded-3xl flex items-center gap-4 border border-king-gold/5 cursor-pointer hover:border-king-gold/20">
-          <div className="w-12 h-12 rounded-2xl bg-king-blue border border-king-gold/20 flex items-center justify-center text-king-gold font-bold">C</div>
-          <div className="flex-1">
-             <p className="font-bold">Captain_Alghbsi</p>
-             <p className="text-xs text-king-gold/50 truncate">Welcome aboard the KING flight...</p>
+  const dests = ['Tokyo', 'Paris', 'Cairo', 'Dubai', 'London'];
+
+  return (
+    <div className="space-y-8 animate-in fade-in duration-500">
+       <div className="bg-king-gold p-8 rounded-[2.5rem] text-king-blue shadow-2xl shadow-king-gold/20 relative overflow-hidden group">
+          <Plane size={120} className="absolute -right-8 -top-8 text-king-blue-deep/5 -rotate-12 group-hover:translate-x-4 transition-transform" />
+          <h2 className="text-4xl font-black italic tracking-tighter mb-2 uppercase">{t.appTitle} Radar</h2>
+          <div className="flex justify-between items-end">
+             <p className="text-king-blue/60 font-bold text-xs uppercase tracking-widest">Active Flights: 1,482</p>
+             <button onClick={() => setView('live')} className="bg-king-blue text-king-gold px-4 py-2 rounded-xl font-black italic text-[10px] uppercase shadow-lg shadow-black/20 flex items-center gap-2 active:scale-95 transition-all"><Radio size={12}/> Live Flight</button>
           </div>
-          <div className="text-[10px] text-king-gold/30">12:45</div>
        </div>
-     ))}
-  </div>
-);
 
-const ChatDetailView = ({ setView, t, triggerFlight, isRtl, handleSendGift, profile }) => {
+       <div className="space-y-4">
+          <h3 className="font-black italic uppercase text-king-gold flex items-center gap-2"><Navigation size={18}/> Live Manifest</h3>
+          {passengers.map((p, i) => (
+            <div key={p.id} onClick={() => triggerFlight(`Hello from ${p.username}`, p, dests[i % dests.length])} className="bg-king-blue-light border border-king-gold/10 p-4 rounded-2xl flex items-center justify-between hover:border-king-gold/50 transition-all cursor-pointer">
+               <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-king-blue flex items-center justify-center font-black text-king-gold">{(p.username || 'P')[0].toUpperCase()}</div>
+                  <div><p className="font-bold text-sm">{p.username || 'Passenger'}</p><p className="text-[10px] text-king-gold/50 uppercase">Flying to {dests[i % dests.length]}</p></div>
+               </div>
+               <ChevronRight size={18} className="text-king-gold/30" />
+            </div>
+          ))}
+       </div>
+    </div>
+  );
+};
+
+const ChatListView = ({ setView, t, setSelectedRecipient }) => {
+  const [contacts, setContacts] = useState([]);
+
+  useEffect(() => {
+    supabase.from('profiles').select('id, username, avatar_url').limit(10)
+      .then(({data}) => data && setContacts(data));
+  }, []);
+
+  return (
+    <div className="space-y-4">
+       <h2 className="text-2xl font-black italic uppercase text-king-gold">{t.chat}</h2>
+       {contacts.map(c => (
+         <div key={c.id} onClick={() => { setSelectedRecipient(c); setView('chat_detail'); }} className="p-4 bg-king-blue-light rounded-3xl flex items-center gap-4 border border-king-gold/5 cursor-pointer hover:border-king-gold/20">
+            <div className="w-12 h-12 rounded-2xl bg-king-blue border border-king-gold/20 overflow-hidden flex items-center justify-center text-king-gold font-bold">
+               {c.avatar_url ? <img src={c.avatar_url} className="w-full h-full object-cover" /> : (c.username || 'P')[0].toUpperCase()}
+            </div>
+            <div className="flex-1">
+               <p className="font-bold">{c.username || 'Passenger'}</p>
+               <p className="text-xs text-king-gold/50 truncate">Welcome aboard the KING flight...</p>
+            </div>
+            <div className="text-[10px] text-king-gold/30">12:45</div>
+         </div>
+       ))}
+    </div>
+  );
+};
+
+const ChatDetailView = ({ setView, t, triggerFlight, isRtl, handleSendGift, profile, selectedRecipient }) => {
   const [text, setText] = useState('');
   const [showOriginal, setShowOriginal] = useState(false);
   const [showGifts, setShowGifts] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [messages, setMessages] = useState([]);
 
+  const recipientId = selectedRecipient?.id || '00000000-0000-0000-0000-000000000000';
+
   useEffect(() => {
-    // Fetch initial messages
-    supabase.from('messages').select('*').order('created_at', { ascending: true })
+    if (!profile) return;
+    // Fetch initial messages for this conversation
+    supabase.from('messages')
+      .select('*')
+      .or(`and(sender_id.eq.${profile.id},receiver_id.eq.${recipientId}),and(sender_id.eq.${recipientId},receiver_id.eq.${profile.id})`)
+      .order('created_at', { ascending: true })
       .then(({data}) => data && setMessages(data));
 
     // Listen for new messages
-    const channel = supabase.channel('chat_room').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' },
-      payload => setMessages(prev => [...prev, payload.new])
+    const channel = supabase.channel(`chat_${profile.id}_${recipientId}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' },
+      payload => {
+        const msg = payload.new;
+        if ((msg.sender_id === profile.id && msg.receiver_id === recipientId) || (msg.sender_id === recipientId && msg.receiver_id === profile.id)) {
+          setMessages(prev => [...prev, msg]);
+        }
+      }
     ).subscribe();
 
     return () => supabase.removeChannel(channel);
-  }, []);
+  }, [profile, recipientId]);
 
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
@@ -443,11 +478,22 @@ const ChatDetailView = ({ setView, t, triggerFlight, isRtl, handleSendGift, prof
     try {
       const fileExt = file.name.split('.').pop();
       const filePath = `${profile.id}/${Date.now()}.${fileExt}`;
-      const { error } = await supabase.storage.from('king_media').upload(filePath, file);
-      if (error) throw error;
+      const { error: uploadError } = await supabase.storage.from('king_media').upload(filePath, file);
+      if (uploadError) throw uploadError;
+
       const { data: { publicUrl } } = supabase.storage.from('king_media').getPublicUrl(filePath);
-      triggerFlight(`Sent a file: ${publicUrl}`);
-      setMessages([...messages, { id: Date.now(), text: "Shared a file", media: publicUrl, isSender: true }]);
+
+      const { error: dbError } = await supabase.from('messages').insert({
+        sender_id: profile.id,
+        receiver_id: recipientId,
+        content: `Shared a ${file.type.startsWith('video') ? 'video' : 'photo'}`,
+        media_url: publicUrl,
+        media_type: file.type.startsWith('video') ? 'video' : 'photo',
+        flight_state: 'arrived'
+      });
+      if (dbError) throw dbError;
+
+      triggerFlight(isRtl ? 'تم رفع الملف بنجاح' : 'File uploaded successfully');
     } catch (err) { alert(err.message); } finally { setUploading(false); }
   };
 
@@ -455,22 +501,30 @@ const ChatDetailView = ({ setView, t, triggerFlight, isRtl, handleSendGift, prof
     <div className="h-[80vh] flex flex-col relative">
        <div className="flex items-center gap-4 mb-6">
           <button onClick={() => setView('chat')}><ArrowLeft size={24} className="text-king-gold"/></button>
-          <h2 className="font-black italic text-xl uppercase tracking-tighter">Captain Alghbsi</h2>
+          <h2 className="font-black italic text-xl uppercase tracking-tighter">{selectedRecipient?.username || 'Passenger'}</h2>
        </div>
 
        <div className="flex-1 space-y-4 overflow-y-auto no-scrollbar py-4">
           {messages.map(msg => {
-            const isVideo = msg.media && (msg.media.toLowerCase().endsWith('.mp4') || msg.media.toLowerCase().endsWith('.webm'));
+            const isMe = msg.sender_id === profile?.id;
+            const isVideo = msg.media_type === 'video' || (msg.media_url && (msg.media_url.toLowerCase().endsWith('.mp4') || msg.media_url.toLowerCase().endsWith('.webm')));
+            const isGift = msg.media_type === 'gift' || msg.gift_id;
+
             return (
-              <div key={msg.id} className={`max-w-[85%] p-4 rounded-[2rem] border border-king-gold/10 ${msg.isSender ? (isRtl ? 'mr-auto bg-king-blue-light' : 'ml-auto bg-king-blue-light') : (isRtl ? 'ml-auto bg-king-blue-deep' : 'mr-auto bg-king-blue-deep')}`}>
-                 {msg.media ? (
+              <div key={msg.id} className={`max-w-[85%] p-4 rounded-[2rem] border border-king-gold/10 ${isMe ? (isRtl ? 'mr-auto bg-king-blue-light' : 'ml-auto bg-king-blue-light') : (isRtl ? 'ml-auto bg-king-blue-deep' : 'mr-auto bg-king-blue-deep')}`}>
+                 {isGift ? (
+                    <div className="flex flex-col items-center gap-2 p-2">
+                       <div className="text-4xl animate-bounce">{GIFTS.find(g => g.id === msg.gift_id)?.icon || '🎁'}</div>
+                       <p className="text-[10px] font-black uppercase text-king-gold">{isMe ? 'GIFT SENT' : 'GIFT RECEIVED'}</p>
+                    </div>
+                 ) : msg.media_url ? (
                     isVideo ? (
-                      <video src={msg.media} controls className="w-full rounded-2xl mb-2 max-h-60 object-cover" />
+                      <video src={msg.media_url} controls className="w-full rounded-2xl mb-2 max-h-60 object-cover" />
                     ) : (
-                      <img src={msg.media} className="w-full rounded-2xl mb-2" />
+                      <img src={msg.media_url} className="w-full rounded-2xl mb-2" />
                     )
                  ) : (
-                    <p className="text-sm leading-relaxed">{showOriginal && msg.original ? msg.original : msg.text}</p>
+                    <p className="text-sm leading-relaxed">{showOriginal && msg.original_content ? msg.original_content : msg.content}</p>
                  )}
                  {msg.original && <button onClick={() => setShowOriginal(!showOriginal)} className="mt-2 text-[8px] font-black uppercase text-king-gold/40 border border-king-gold/20 px-2 py-0.5 rounded-full">{showOriginal ? t.translate : t.original}</button>}
               </div>
@@ -486,7 +540,7 @@ const ChatDetailView = ({ setView, t, triggerFlight, isRtl, handleSendGift, prof
             </div>
             <div className="grid grid-cols-4 gap-3 overflow-y-auto no-scrollbar pb-8">
                {GIFTS.map(gift => (
-                 <button key={gift.id} onClick={() => { handleSendGift(gift, 'captain-id'); setShowGifts(false); }} className="flex flex-col items-center gap-1 group">
+                 <button key={gift.id} onClick={() => { handleSendGift(gift, recipientId); setShowGifts(false); }} className="flex flex-col items-center gap-1 group">
                     <div className="w-12 h-12 bg-king-blue-light rounded-xl border border-king-gold/10 flex items-center justify-center text-2xl group-active:scale-90 transition-all">{gift.icon}</div>
                     <p className="text-[6px] font-black uppercase text-white/50">{gift.name}</p>
                     <p className="text-[8px] font-black text-king-gold italic">{gift.cost} M</p>
@@ -509,6 +563,7 @@ const ChatDetailView = ({ setView, t, triggerFlight, isRtl, handleSendGift, prof
                 triggerFlight(text);
                 await supabase.from('messages').insert({
                   sender_id: profile.id,
+                  receiver_id: recipientId,
                   content: text,
                   flight_state: 'arrived'
                 });
@@ -536,7 +591,15 @@ const CollectView = ({ t, isRtl, profile }) => (
         <div className="bg-king-blue-light p-6 rounded-3xl border border-king-gold/10 flex flex-col items-center text-center">
            <Gift size={32} className="text-king-gold mb-3" />
            <p className="font-bold text-sm">Daily Reward</p>
-           <button className="mt-3 bg-king-gold/10 text-king-gold px-4 py-1.5 rounded-full text-[10px] font-black uppercase">Claim</button>
+           <button onClick={async () => {
+              try {
+                const { data, error } = await supabase.rpc('claim_daily_reward', { user_uuid: profile.id });
+                if (error) throw error;
+                alert(isRtl ? `تم استلام ${data} ميل بنجاح!` : `Claimed ${data} miles!`);
+              } catch (err) {
+                alert(err.message);
+              }
+           }} className="mt-3 bg-king-gold/10 text-king-gold px-4 py-1.5 rounded-full text-[10px] font-black uppercase">Claim</button>
         </div>
         <div className="bg-king-blue-light p-6 rounded-3xl border border-king-gold/10 flex flex-col items-center text-center">
            <Users size={32} className="text-king-gold mb-3" />

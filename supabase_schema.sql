@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   last_avatar_update TIMESTAMP WITH TIME ZONE DEFAULT (NOW() - INTERVAL '2 days'),
   last_name_update TIMESTAMP WITH TIME ZONE DEFAULT (NOW() - INTERVAL '8 days'),
   last_username_update TIMESTAMP WITH TIME ZONE DEFAULT (NOW() - INTERVAL '32 days'),
+  last_claim TIMESTAMP WITH TIME ZONE DEFAULT (NOW() - INTERVAL '2 days'),
 
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -168,5 +169,27 @@ BEGIN
   UPDATE public.profiles
   SET miles = miles + amount
   WHERE id = user_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- DAILY REWARD FUNCTION
+CREATE OR REPLACE FUNCTION public.claim_daily_reward(user_uuid UUID)
+RETURNS DECIMAL AS $$
+DECLARE
+  reward_amount DECIMAL := 50.00;
+  last_cl TIMESTAMP WITH TIME ZONE;
+BEGIN
+  SELECT last_claim INTO last_cl FROM public.profiles WHERE id = user_uuid;
+
+  IF last_cl > (NOW() - INTERVAL '24 hours') THEN
+    RAISE EXCEPTION 'Already claimed today';
+  END IF;
+
+  UPDATE public.profiles
+  SET miles = miles + reward_amount,
+      last_claim = NOW()
+  WHERE id = user_uuid;
+
+  RETURN reward_amount;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
