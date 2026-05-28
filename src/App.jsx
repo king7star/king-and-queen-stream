@@ -61,11 +61,6 @@ const App = () => {
 
   const t = translations[lang];
   const isRtl = lang === 'ar';
- feat/initial-king-live-queen-setup-17143322997806521655
-
-  const isAdmin = profile?.is_admin || false;
-  const isGuest = session?.user?.id === '00000000-0000-0000-0000-000000000000';
- main
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -99,9 +94,11 @@ const App = () => {
     setTimeout(() => setFlightStage(2), 5000);
     setTimeout(() => {
       setIsFlightActive(false);
-      setView('chat_detail');
+      // Stay in current view if we were already in chat_detail
+      if (view !== 'chat_detail') setView('chat_detail');
     }, 7000);
-  }; feat/initial-king-live-queen-setup-17143322997806521655
+  };
+
   return (
     <div className={`min-h-screen ${isRtl ? 'rtl' : 'ltr'} bg-king-blue text-white font-sans selection:bg-king-gold/30`}>
       {isFlightActive ? (
@@ -110,23 +107,10 @@ const App = () => {
         <>
           <Header t={t} profile={profile} setView={setView} isRtl={isRtl} />
           <main className="pb-24 pt-16 px-4 max-w-lg mx-auto">
-            {renderView({ view, setView, t, isRtl, profile, triggerFlight, setLang, lang })}
+            {renderView({ view, setView, t, isRtl, profile, triggerFlight, setLang, lang, handleSendGift })}
           </main>
           <Navbar view={view} setView={setView} t={t} />
         </>
-
-      <main className={`${!isFullscreen ? 'pt-14 pb-20' : ''} min-h-screen`}>
-        {renderView({ view, navigate, t, isRtl, setLang, profile, setProfile, unreadMessages, showNsfw, setShowNsfw, wallet, viewerCount, setShowLogout, isAdmin, isGuest })}
-      </main>
-
-      {!isFullscreen && (
-        <nav className="fixed bottom-0 left-0 right-0 z-40 bg-background-light dark:bg-background-dark border-t border-gray-200 dark:border-gray-800 px-6 h-16 flex items-center justify-between">
-          <NavItem active={view === 'home'} icon={<Layout size={24} />} onClick={() => navigate('home')} />
-          <NavItem active={view === 'following'} icon={<Heart size={24} />} onClick={() => navigate('following')} />
-          <NavItem active={view === 'feed'} icon={<Rss size={24} />} onClick={() => navigate('feed')} />
-          <NavItem active={view === 'store'} icon={<Store size={24} />} onClick={() => navigate('store')} />
-          <NavItem active={view === 'profile' || view.startsWith('settings') || view === 'admin'} icon={<User size={24} />} onClick={() => navigate('profile')} />
-        </nav> main
       )}
     </div>
   );
@@ -168,49 +152,47 @@ const AuthView = ({ t, isRtl, setSession, setLang, lang }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [id, setId] = useState('');
   const [password, setPassword] = useState('');
- feat/initial-king-live-queen-setup-17143322997806521655
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState(null);
-
-  const handleGoogleLogin = async () => {
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: window.location.origin,
-        },
-      });
-      if (error) {
-        if (error.message.includes('not enabled')) {
-          alert(isRtl
-            ? 'عذراً، يجب تفعيل تسجيل الدخول بجوجل من لوحة تحكم Supabase أولاً (Authentication > Providers > Google)'
-            : 'Google login is not enabled yet. Please enable it in your Supabase Dashboard (Authentication > Providers > Google)');
-          return;
-        }
-        throw error;
-      }
-    } catch (err) {
-      alert(isRtl ? `خطأ في تسجيل الدخول بـ Google: ${err.message}` : `Google login error: ${err.message}`);
-    }
-  }; main
 
   const handleAuth = async (e) => {
     e.preventDefault();
-    // Testing logic for king_dev and alghbsi
-    if (id === 'king_dev' || id === 'king@gmail.com') {
-      if (password === 'king2024') {
-        setSession({ user: { id: 'admin-id', email: 'king@gmail.com' } });
-        return;
-      }
+    setLoading(true);
+
+    try {
+      let finalEmail = id;
+      // Handle special demo usernames
+      if (id === 'king_dev') finalEmail = 'king@gmail.com';
+      if (id === 'alghbsi') finalEmail = 'captain@gmail.com';
+
+      const { error, data } = isLogin
+        ? await supabase.auth.signInWithPassword({ email: finalEmail, password })
+        : await supabase.auth.signUp({
+            email: finalEmail,
+            password,
+            options: {
+              data: {
+                username: username || id.split('@')[0],
+              }
+            }
+          });
+
+      if (error) throw error;
+      if (data.session) setSession(data.session);
+      else if (!isLogin) alert(isRtl ? 'تم إنشاء الحساب! يرجى تفعيل البريد الإلكتروني' : 'Account created! Please verify your email');
+
+    } catch (err) {
+      alert(isRtl ? `خطأ: ${err.message}` : `Error: ${err.message}`);
+    } finally {
+      setLoading(false);
     }
-    if (id === 'alghbsi' || id === 'captain@gmail.com') {
-      if (password === 'password123') {
-        setSession({ user: { id: 'captain-id', email: 'captain@gmail.com' } });
-        return;
-      }
-    }
-    alert(isRtl ? 'خطأ في البيانات' : 'Invalid credentials');
+  };
+
+  const handleGoogleLogin = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin }
+    });
   };
 
   return (
@@ -226,6 +208,11 @@ const AuthView = ({ t, isRtl, setSession, setLang, lang }) => {
        </div>
 
        <form onSubmit={handleAuth} className="w-full max-w-sm space-y-4">
+          {!isLogin && (
+            <div className="space-y-1">
+              <input type="text" placeholder={isRtl ? 'اسم المستخدم' : 'Username'} className="w-full bg-king-blue-light border border-king-gold/20 rounded-2xl p-4 outline-none focus:ring-1 focus:ring-king-gold text-white placeholder:text-white/20" value={username} onChange={e => setUsername(e.target.value)} />
+            </div>
+          )}
           <div className="space-y-1">
             <input type="text" placeholder={t.email} className="w-full bg-king-blue-light border border-king-gold/20 rounded-2xl p-4 outline-none focus:ring-1 focus:ring-king-gold text-white placeholder:text-white/20" value={id} onChange={e => setId(e.target.value)} />
           </div>
@@ -233,11 +220,11 @@ const AuthView = ({ t, isRtl, setSession, setLang, lang }) => {
             <input type="password" placeholder={t.password} className="w-full bg-king-blue-light border border-king-gold/20 rounded-2xl p-4 outline-none focus:ring-1 focus:ring-king-gold text-white placeholder:text-white/20" value={password} onChange={e => setPassword(e.target.value)} />
             <Lock className="absolute right-4 top-4 text-king-gold/20" size={20} />
           </div>
-          <button className="w-full py-4 bg-king-gold text-king-blue rounded-2xl font-black italic uppercase tracking-tighter text-lg shadow-xl shadow-king-gold/20 active:scale-95 transition-all">{isLogin ? t.login : t.signup}</button>
+          <button className="w-full py-4 bg-king-gold text-king-blue rounded-2xl font-black italic uppercase tracking-tighter text-lg shadow-xl shadow-king-gold/20 active:scale-95 transition-all">{loading ? '...' : (isLogin ? t.login : t.signup)}</button>
        </form>
 
        <div className="w-full max-w-sm mt-8 space-y-3">
-          <button className="w-full py-4 bg-white text-black rounded-2xl font-bold flex items-center justify-center gap-3 active:scale-95 transition-all">
+          <button onClick={handleGoogleLogin} className="w-full py-4 bg-white text-black rounded-2xl font-bold flex items-center justify-center gap-3 active:scale-95 transition-all">
              <img src="https://www.google.com/favicon.ico" className="w-5 h-5" /> {t.googleLogin}
           </button>
           <button className="w-full py-4 bg-king-blue-light border border-king-gold/20 text-king-gold rounded-2xl font-bold flex items-center justify-center gap-3 active:scale-95 transition-all">
@@ -303,6 +290,7 @@ const renderView = (props) => {
     case 'map': return <MapView {...props} />;
     case 'chat': return <ChatListView {...props} />;
     case 'chat_detail': return <ChatDetailView {...props} />;
+    case 'live': return <LiveStreamView {...props} />;
     case 'collect': return <CollectView {...props} />;
     case 'profile': return <ProfileView {...props} />;
     case 'admin': return <AdminPanelView {...props} />;
@@ -310,12 +298,15 @@ const renderView = (props) => {
   }
 };
 
-const HomeView = ({ t, triggerFlight }) => (
+const HomeView = ({ t, triggerFlight, setView }) => (
   <div className="space-y-8 animate-in fade-in duration-500">
      <div className="bg-king-gold p-8 rounded-[2.5rem] text-king-blue shadow-2xl shadow-king-gold/20 relative overflow-hidden group">
         <Plane size={120} className="absolute -right-8 -top-8 text-king-blue-deep/5 -rotate-12 group-hover:translate-x-4 transition-transform" />
         <h2 className="text-4xl font-black italic tracking-tighter mb-2 uppercase">{t.appTitle} Radar</h2>
-        <p className="text-king-blue/60 font-bold text-xs uppercase tracking-widest">Active Flights: 1,482</p>
+        <div className="flex justify-between items-end">
+           <p className="text-king-blue/60 font-bold text-xs uppercase tracking-widest">Active Flights: 1,482</p>
+           <button onClick={() => setView('live')} className="bg-king-blue text-king-gold px-4 py-2 rounded-xl font-black italic text-[10px] uppercase shadow-lg shadow-black/20 flex items-center gap-2 active:scale-95 transition-all">Live Flight</button>
+        </div>
      </div>
 
      <div className="space-y-4">
@@ -348,58 +339,14 @@ const ChatListView = ({ setView, t }) => (
      ))}
   </div>
 );
- feat/initial-king-live-queen-setup-17143322997806521655
-const ChatDetailView = ({ setView, t, triggerFlight, isRtl }) => {
+
+const ChatDetailView = ({ setView, t, triggerFlight, isRtl, handleSendGift, profile }) => {
   const [text, setText] = useState('');
   const [showOriginal, setShowOriginal] = useState(false);
-const SettingsSection = ({ title, children }) => (
-  <div className="space-y-1"><p className="px-4 text-[10px] font-black uppercase tracking-widest text-gray-400 py-2">{title}</p>{children}</div>
-);
-
-const SettingsItem = ({ icon, label, onClick, isRtl }) => (
-  <button onClick={onClick} className={`w-full p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-900 rounded-2xl transition-colors ${isRtl ? 'flex-row-reverse' : ''}`}>
-    <div className={`flex items-center gap-4 ${isRtl ? 'flex-row-reverse' : ''}`}><span className="text-pink-500">{icon}</span><span className="font-bold text-sm">{label}</span></div>
-    <ChevronRight size={18} className={`text-gray-300 ${isRtl ? 'rotate-180' : ''}`} />
-  </button>
-);
-
-const EditProfileView = ({ t, navigate, isRtl, profile, setProfile, isGuest }) => {
-  const [formData, setFormData] = useState(profile || { username: '', gender: 'Male', birth_date: '', location: '', bio: '' });
-  const [isSaved, setIsSaved] = useState(false);
-  const [uploading, setUploading] = useState(false);
-
-  const handleSave = async () => {
-    if (isGuest) {
-      alert(isRtl ? 'عذراً، يجب تسجيل الدخول لحفظ التغييرات' : 'Sorry, you must be logged in to save changes');
-      return;
-    }
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const { error } = await supabase.from('profiles').upsert({ id: user.id, ...formData, updated_at: new Date() });
-    if (!error) { setProfile(formData); setIsSaved(true); setTimeout(() => setIsSaved(false), 2000); }
-  };
-
-  const uploadAvatar = async (e) => {
-    if (isGuest) {
-      alert(isRtl ? 'عذراً، يجب إنشاء حساب لرفع الصور' : 'Sorry, you must create an account to upload photos');
-      return;
-    }
-    try {
-      setUploading(true);
-      const file = e.target.files[0];
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const fileExt = file.name.split('.').pop();
-      const filePath = `${user.id}-${Math.random()}.${fileExt}`;
-      let { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file);
-      if (uploadError) throw uploadError;
-      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
-      setFormData({ ...formData, avatar_url: publicUrl });
-    } catch (e) { alert(e.message); } finally { setUploading(false); }
-  }; main
+  const [showGifts, setShowGifts] = useState(false);
 
   return (
-    <div className="h-[80vh] flex flex-col">
+    <div className="h-[80vh] flex flex-col relative">
        <div className="flex items-center gap-4 mb-6">
           <button onClick={() => setView('chat')}><ArrowLeft size={24} className="text-king-gold"/></button>
           <h2 className="font-black italic text-xl uppercase">Alghbsi</h2>
@@ -410,8 +357,33 @@ const EditProfileView = ({ t, navigate, isRtl, profile, setProfile, isGuest }) =
              <button onClick={() => setShowOriginal(!showOriginal)} className="mt-2 text-[10px] font-black uppercase text-king-gold/50 border border-king-gold/20 px-2 py-0.5 rounded-full">{t.original}</button>
           </div>
        </div>
+
+       {showGifts && (
+         <div className="absolute inset-0 z-50 bg-king-blue-deep/95 backdrop-blur-md rounded-3xl p-6 animate-in slide-in-from-bottom-20 flex flex-col border border-king-gold/20">
+            <div className="flex justify-between items-center mb-6">
+               <div>
+                  <h3 className="font-black italic text-king-gold uppercase tracking-tighter text-sm">Luxury Gifts</h3>
+                  <p className="text-[8px] font-bold text-white/40 uppercase">Balance: {profile?.miles || 0}</p>
+               </div>
+               <button onClick={() => setShowGifts(false)} className="text-king-gold/50"><X size={20}/></button>
+            </div>
+            <div className="grid grid-cols-4 gap-3 overflow-y-auto no-scrollbar pb-8">
+               {GIFTS.map(gift => (
+                 <button key={gift.id} onClick={() => { handleSendGift(gift, 'captain-id'); setShowGifts(false); }} className="flex flex-col items-center gap-1 group">
+                    <div className="w-12 h-12 bg-king-blue-light rounded-xl border border-king-gold/10 flex items-center justify-center text-2xl group-active:scale-90 transition-all">{gift.icon}</div>
+                    <div className="text-center">
+                       <p className="text-[6px] font-black uppercase text-white/50">{gift.name}</p>
+                       <p className="text-[8px] font-black text-king-gold italic">{gift.cost} M</p>
+                    </div>
+                 </button>
+               ))}
+            </div>
+         </div>
+       )}
+
        <div className="flex items-center gap-2 bg-king-blue-deep/50 p-2 rounded-full border border-king-gold/10">
-          <input type="text" value={text} onChange={e => setText(e.target.value)} placeholder="Type a message..." className="flex-1 bg-transparent px-4 py-2 outline-none text-sm placeholder:text-king-gold/20" />
+          <button onClick={() => setShowGifts(true)} className="w-10 h-10 bg-king-gold/10 rounded-full flex items-center justify-center text-king-gold active:scale-90 transition-all border border-king-gold/20"><Gift size={18}/></button>
+          <input type="text" value={text} onChange={e => setText(e.target.value)} placeholder="Type a message..." className="flex-1 bg-transparent px-2 py-2 outline-none text-sm placeholder:text-king-gold/20" />
           <button onClick={() => { triggerFlight(text); setText(''); }} className="w-10 h-10 bg-king-gold rounded-full flex items-center justify-center text-king-blue active:scale-90 transition-all"><Send size={18}/></button>
        </div>
     </div>
@@ -450,7 +422,7 @@ const CollectView = ({ t, isRtl }) => (
      </div>
   </div>
 );
- feat/initial-king-live-queen-setup-17143322997806521655
+
 const ProfileView = ({ t, profile, isRtl, setLang, lang }) => (
   <div className="space-y-8 animate-in fade-in duration-500">
      <div className="text-center space-y-4">
@@ -463,124 +435,6 @@ const ProfileView = ({ t, profile, isRtl, setLang, lang }) => (
            <p className="text-[10px] font-black uppercase tracking-widest text-king-gold/40">Status: First Class Passenger</p>
         </div>
      </div>
-const StreamSetupView = ({ t, navigate, isRtl, showNsfw, setShowNsfw, isGuest }) => {
-  const videoRef = useRef(null);
-  const [stream, setStream] = useState(null);
-  const [isMuted, setIsMuted] = useState(false);
-  const [useFrontCamera, setUseFrontCamera] = useState(true);
-  const [quality, setQuality] = useState('720p HD');
-  const [showQualityMenu, setShowQualityMenu] = useState(false);
-  const [isPremium, setIsPremium] = useState(false);
-  const [selectedGift, setSelectedGift] = useState(GIFTS[0]);
-  const [joinPermission, setJoinPermission] = useState('anybody');
-  const [commentPermission, setCommentPermission] = useState('anybody');
-
-  useEffect(() => {
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: useFrontCamera ? 'user' : 'environment' }, audio: true })
-      .then(s => { setStream(s); if (videoRef.current) videoRef.current.srcObject = s; });
-    return () => stream?.getTracks().forEach(t => t.stop());
-  }, [useFrontCamera]);
-
-  return (
-    <div className="h-screen bg-black relative overflow-hidden flex flex-col">
-      <video ref={videoRef} autoPlay playsInline muted className="absolute inset-0 w-full h-full object-cover" />
-      <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/80"></div>
-      <div className="relative z-10 p-6 flex justify-between items-start">
-         <button onClick={() => navigate('home')} className="w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white"><X size={24} /></button>
-         <div className="flex flex-col gap-2">
-            <button onClick={() => setUseFrontCamera(!useFrontCamera)} className="w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white"><RefreshCw size={20} /></button>
-            <button onClick={() => setIsMuted(!isMuted)} className={`w-10 h-10 backdrop-blur-md rounded-full flex items-center justify-center text-white ${isMuted ? 'bg-pink-500' : 'bg-black/40'}`}>{isMuted ? <MicOff size={20} /> : <Mic size={20} />}</button>
-            <div className="relative">
-              <button onClick={() => setShowQualityMenu(!showQualityMenu)} className="bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full text-[10px] font-bold text-white flex items-center gap-1 uppercase"><Monitor size={12} /> {quality} <ChevronDown size={12} /></button>
-              {showQualityMenu && (
-                <div className="absolute right-0 top-10 bg-black/80 backdrop-blur-xl rounded-2xl p-2 w-32 border border-white/10">
-                  {['480p', '720p HD', '1080p FHD'].map(q => <button key={q} onClick={() => { setQuality(q); setShowQualityMenu(false); }} className="w-full text-left px-3 py-2 text-xs text-white hover:bg-pink-500 rounded-lg">{q}</button>)}
-                </div>
-              )}
-            </div>
-         </div>
-      </div>
-      <div className="relative z-10 flex-1 overflow-y-auto px-6 no-scrollbar space-y-6 pb-24">
-         <div className="bg-black/40 backdrop-blur-md p-4 rounded-3xl border border-white/10">
-            <div className="flex items-center justify-between mb-2">
-               <div className="flex items-center gap-2 text-pink-500"><Zap size={20} /><span className="font-bold">{t.premium}</span></div>
-               <button onClick={() => setIsPremium(!isPremium)} className={`w-12 h-6 rounded-full relative transition-colors ${isPremium ? 'bg-pink-500' : 'bg-gray-600'}`}><div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${isPremium ? (isRtl ? 'left-1' : 'right-1') : (isRtl ? 'right-1' : 'left-1')}`}></div></button>
-            </div>
-            <p className="text-[10px] text-white/50">{t.premiumNote}</p>
-            {isPremium && (
-              <div className="mt-4 pt-4 border-t border-white/10">
-                <p className="text-[10px] font-bold text-white/70 uppercase mb-3">{t.entryTicket}</p>
-                <div className="flex gap-2">
-                   {GIFTS.map(gift => <button key={gift.id} onClick={() => setSelectedGift(gift)} className={`flex-1 p-2 rounded-xl border transition-all ${selectedGift.id === gift.id ? 'bg-pink-500 border-pink-500' : 'bg-white/5 border-white/10'}`}><div className="flex flex-col items-center gap-1">{gift.icon}<span className="text-[10px] font-bold">{gift.value}</span></div></button>)}
-                </div>
-              </div>
-            )}
-         </div>
-         <div className="bg-black/40 backdrop-blur-md p-4 rounded-3xl border border-white/10 space-y-6">
-            <div className="space-y-3">
-              <p className="text-[10px] font-bold text-white/70 uppercase flex items-center gap-2"><UsersIcon size={12}/> {t.whoCanJoin}</p>
-              <div className="flex flex-col gap-2">
-                <PermOption icon={<Globe2 size={14}/>} label={t.anyone} active={joinPermission === 'anybody'} onClick={() => setJoinPermission('anybody')} note={t.anybodyNote} isRtl={isRtl}/>
-                <PermOption icon={<Heart size={14}/>} label={t.friends} active={joinPermission === 'friends'} onClick={() => setJoinPermission('friends')} isRtl={isRtl}/>
-              </div>
-            </div>
-            <div className="space-y-3">
-              <p className="text-[10px] font-bold text-white/70 uppercase flex items-center gap-2"><MessageSquare size={12}/> {t.whoCanComment}</p>
-              <div className="flex flex-col gap-2">
-                <PermOption icon={<Globe2 size={14}/>} label={t.anyone} active={commentPermission === 'anybody'} onClick={() => setCommentPermission('anybody')} note={t.anybodyCommentNote} isRtl={isRtl}/>
-                <PermOption icon={<MessageSquareOff size={14}/>} label={t.chatDisabled} active={commentPermission === 'disabled'} onClick={() => setCommentPermission('disabled')} isRtl={isRtl}/>
-              </div>
-            </div>
-         </div>
-         <div className="bg-black/40 backdrop-blur-md p-4 rounded-3xl border border-white/10 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2"><ImageIcon size={18} className="text-gray-400"/><span className="text-xs font-bold">{t.thumbnail}</span></div>
-              <button className="bg-pink-500 text-[10px] font-bold px-4 py-1.5 rounded-full uppercase">{t.update}</button>
-            </div>
-            <div className="flex items-center justify-between pt-2 border-t border-white/10">
-               <div className="flex items-center gap-2 text-pink-500"><Lock size={18}/><span className="text-xs font-bold uppercase">NSFW</span></div>
-               <button onClick={() => setShowNsfw(!showNsfw)} className={`w-12 h-6 rounded-full relative transition-colors ${showNsfw ? 'bg-pink-500' : 'bg-gray-600'}`}><div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${showNsfw ? (isRtl ? 'left-1' : 'right-1') : (isRtl ? 'right-1' : 'left-1')}`}></div></button>
-            </div>
-            <p className="text-[10px] text-white/50">{t.nsfwNote}</p>
-         </div>
-      </div>
-      <div className="absolute bottom-6 left-6 right-6 z-20">
-        <button
-          onClick={() => {
-            if (isGuest) {
-              alert(isRtl ? 'يجب تسجيل الدخول لبدء بث مباشر' : 'You must log in to start a live stream');
-              return;
-            }
-            navigate('connecting');
-          }}
-          className="w-full bg-pink-500 text-white font-black py-4 rounded-2xl shadow-xl shadow-pink-500/30 uppercase italic tracking-widest animate-pulse"
-        >
-          {t.start}
-        </button>
-      </div>
-    </div>
-  );
-};
-
-const PermOption = ({ icon, label, active, onClick, note, isRtl }) => (
-  <button onClick={onClick} className="text-left w-full group">
-    <div className={`flex items-center gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
-      <div className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${active ? 'border-pink-500 bg-pink-500' : 'border-white/30'}`}>{active && <div className="w-1.5 h-1.5 bg-white rounded-full"></div>}</div>
-      <div className={`flex items-center gap-2 text-sm font-bold ${active ? 'text-white' : 'text-white/60'}`}>{icon} {label}</div>
-    </div>
-    {active && note && <p className={`text-[10px] text-white/40 mt-1 ${isRtl ? 'text-right mr-7' : 'ml-7'}`}>{note}</p>}
-  </button>
-);
-
-const ConnectingView = ({ t, navigate }) => {
-  useEffect(() => { setTimeout(() => navigate('active_stream'), 2000); }, []);
-  return (
-    <div className="h-screen bg-black flex flex-col items-center justify-center text-white">
-      <div className="w-16 h-16 border-4 border-pink-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-      <p className="font-black italic text-xl uppercase tracking-widest">{t.connecting}</p>
-    </div>
-  );
-}; main
 
      <div className="bg-king-blue-light rounded-[2.5rem] border border-king-gold/10 overflow-hidden">
         <ProfileItem icon={<Mail size={18}/>} label={t.email} value="king@gmail.com" />
@@ -624,6 +478,74 @@ const MapView = ({ t, isRtl }) => (
      </div>
   </div>
 );
+
+const LiveStreamView = ({ t, setView, isRtl, handleSendGift, profile }) => {
+  const [showGifts, setShowGifts] = useState(false);
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(s => {
+      if (videoRef.current) videoRef.current.srcObject = s;
+    });
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black flex flex-col">
+       <video ref={videoRef} autoPlay playsInline muted className="absolute inset-0 w-full h-full object-cover opacity-60" />
+       <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/80"></div>
+
+       <div className="relative z-10 p-6 flex justify-between items-start">
+          <div className="flex items-center gap-3 bg-black/40 backdrop-blur-md p-2 rounded-2xl border border-white/10">
+             <div className="w-10 h-10 rounded-xl bg-king-gold flex items-center justify-center text-king-blue font-black">C</div>
+             <div>
+                <p className="text-xs font-black text-white">Captain Alghbsi</p>
+                <div className="flex items-center gap-1 text-[8px] font-bold text-king-gold uppercase">Live Now</div>
+             </div>
+          </div>
+          <button onClick={() => setView('home')} className="w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/10"><X size={20}/></button>
+       </div>
+
+       <div className="mt-auto relative z-10 p-6 space-y-4 pb-12">
+          <div className="h-48 overflow-y-auto no-scrollbar space-y-2">
+             {[1, 2].map(i => (
+               <div key={i} className={`flex items-start gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                  <span className="font-black text-[10px] text-king-gold">User_{i}:</span>
+                  <p className="text-[10px] text-white/80 bg-black/20 px-2 py-1 rounded-lg">Amazing flight! ✈️👑</p>
+               </div>
+             ))}
+          </div>
+
+          <div className={`flex items-center gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
+             <input type="text" placeholder="Type something..." className="flex-1 bg-white/10 backdrop-blur-xl border border-white/10 rounded-full px-4 py-3 text-xs text-white outline-none" />
+             <button onClick={() => setShowGifts(true)} className="w-12 h-12 bg-king-gold rounded-full flex items-center justify-center text-king-blue shadow-xl shadow-king-gold/20 active:scale-90 transition-all"><Gift size={22}/></button>
+          </div>
+       </div>
+
+       {showGifts && (
+         <div className="absolute inset-0 z-50 bg-king-blue-deep/95 backdrop-blur-md p-8 animate-in slide-in-from-bottom-20 flex flex-col">
+            <div className="flex justify-between items-center mb-8">
+               <div>
+                  <h3 className="font-black italic text-king-gold text-xl uppercase tracking-tighter">Luxury Terminal Gifts</h3>
+                  <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Balance: {profile?.miles || 0} Miles</p>
+               </div>
+               <button onClick={() => setShowGifts(false)} className="text-king-gold/50"><X size={28}/></button>
+            </div>
+            <div className="grid grid-cols-4 gap-6 overflow-y-auto no-scrollbar pb-12">
+               {GIFTS.map(gift => (
+                 <button key={gift.id} onClick={() => { handleSendGift(gift, 'captain-id'); setShowGifts(false); }} className="flex flex-col items-center gap-2 group">
+                    <div className="w-16 h-16 bg-king-blue-light rounded-3xl border border-king-gold/10 flex items-center justify-center text-4xl group-active:scale-90 transition-all group-hover:border-king-gold/50 shadow-lg">{gift.icon}</div>
+                    <div className="text-center">
+                       <p className="text-[10px] font-black uppercase text-white/60">{gift.name}</p>
+                       <p className="text-[12px] font-black text-king-gold italic">{gift.cost} M</p>
+                    </div>
+                 </button>
+               ))}
+            </div>
+         </div>
+       )}
+    </div>
+  );
+};
 
 const AdminPanelView = ({ t, isRtl, setView }) => (
   <div className="space-y-8 animate-in slide-in-from-top-10">
