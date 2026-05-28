@@ -227,8 +227,13 @@ const AuthView = ({ t, isRtl, setSession, setLang, lang }) => {
       let email = id;
 
       // 1. Resolve Demo/Username to Email if needed
-      if (id === 'king_dev') email = 'king@gmail.com';
-      else if (id === 'alghbsi') email = 'captain@gmail.com';
+      if (id === 'king_dev') {
+        email = 'king@gmail.com';
+        if (password === 'king2024') { /* Bypass for testing if needed, but let's stick to real auth */ }
+      }
+      else if (id === 'alghbsi' || id === 'King7star') {
+        email = 'alghbsi@gmail.com';
+      }
       else if (!id.includes('@')) {
         // Assume ID is a username or phone, try to find the email
         const { data: profileData } = await supabase.from('profiles').select('email').or(`username.eq.${id},phone.eq.${id}`).maybeSingle();
