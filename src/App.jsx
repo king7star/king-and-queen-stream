@@ -84,6 +84,7 @@ const App = () => {
   const [isFlightActive, setIsFlightActive] = useState(false);
   const [flightStage, setFlightStage] = useState(0);
   const [currentMessage, setCurrentMessage] = useState(null);
+  const [latestBroadcast, setLatestBroadcast] = useState(null);
 
   const t = translations[lang];
   const isRtl = lang === 'ar';
@@ -100,6 +101,11 @@ const App = () => {
       if (session) fetchUserData(session.user.id);
       else setProfile(null);
     });
+
+    // Listen for Global Broadcasts
+    supabase.channel('broadcasts').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'broadcasts' },
+      payload => setLatestBroadcast(payload.new)
+    ).subscribe();
 
     return () => subscription.unsubscribe();
   }, []);
@@ -136,8 +142,8 @@ const App = () => {
 
   if (!session) return <AuthView t={t} isRtl={isRtl} setSession={setSession} setLang={setLang} lang={lang} />;
 
-  const triggerFlight = (msg) => {
-    setCurrentMessage(msg);
+  const triggerFlight = (msg, destination = 'Dubai') => {
+    setCurrentMessage({ text: msg, destination });
     setIsFlightActive(true);
     setFlightStage(0);
     setTimeout(() => setFlightStage(1), 2000);
@@ -152,9 +158,18 @@ const App = () => {
   return (
     <div className={`min-h-screen ${isRtl ? 'rtl' : 'ltr'} bg-king-blue text-white font-sans selection:bg-king-gold/30`}>
       {isFlightActive ? (
-        <FlightSimulation stage={flightStage} t={t} message={currentMessage} isRtl={isRtl} />
+        <FlightSimulation stage={flightStage} t={t} message={currentMessage} isRtl={isRtl} lang={lang} />
       ) : (
         <>
+          {latestBroadcast && (
+            <div className="fixed top-0 left-0 right-0 z-[60] bg-king-gold text-king-blue p-3 flex items-center justify-between animate-in slide-in-from-top duration-500">
+               <div className="flex items-center gap-3">
+                  <Bell size={18} className="animate-bounce" />
+                  <p className="text-xs font-black italic uppercase">{lang === 'ar' ? latestBroadcast.content_ar : latestBroadcast.content_en}</p>
+               </div>
+               <button onClick={() => setLatestBroadcast(null)}><X size={18}/></button>
+            </div>
+          )}
           <Header t={t} profile={profile} setView={setView} isRtl={isRtl} />
           <main className="pb-24 pt-16 px-4 max-w-lg mx-auto">
             {renderView({ view, setView, t, isRtl, profile, triggerFlight, setLang, lang, handleSendGift })}
@@ -268,8 +283,10 @@ const AuthView = ({ t, isRtl, setSession, setLang, lang }) => {
   );
 };
 
-const FlightSimulation = ({ stage, t, message, isRtl }) => {
-  const fact = FLIGHT_FACTS[Math.floor(Math.random() * FLIGHT_FACTS.length)];
+const FlightSimulation = ({ stage, t, message, isRtl, lang }) => {
+  const destKey = message?.destination || 'Dubai';
+  const cityData = DESTINATIONS[destKey] || DESTINATIONS.Dubai;
+
   return (
     <div className="h-screen bg-king-blue-deep flex flex-col items-center justify-center p-8 text-center overflow-hidden relative">
        <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
@@ -291,10 +308,10 @@ const FlightSimulation = ({ stage, t, message, isRtl }) => {
             </div>
             <div className="bg-king-blue-light p-6 rounded-[2rem] border border-king-gold/20 space-y-4">
                <div className="flex items-center justify-between text-king-gold text-[10px] font-black uppercase">
-                  <span>{fact.country}</span>
-                  <span>{fact.time} | {fact.temp}</span>
+                  <span>{lang === 'ar' ? cityData.ar : cityData.en}</span>
+                  <span>{cityData.gmt} | 24°C</span>
                </div>
-               <p className="text-sm italic leading-relaxed text-white/80">"{fact.fact}"</p>
+               <p className="text-sm italic leading-relaxed text-white/80">"{lang === 'ar' ? cityData.facts.ar : cityData.facts.en}"</p>
                <div className="flex items-center gap-2 text-king-gold/50 text-[10px] font-bold uppercase tracking-widest">
                   <Clock size={12}/> <span>{t.cruising}</span>
                </div>
@@ -340,11 +357,15 @@ const HomeView = ({ t, triggerFlight, setView }) => (
 
      <div className="space-y-4">
         <h3 className="font-black italic uppercase text-king-gold flex items-center gap-2"><Navigation size={18}/> Live Manifest</h3>
-        {[1, 2, 3].map(i => (
-          <div key={i} onClick={() => triggerFlight({ id: i, text: "Sample Message" })} className="bg-king-blue-light border border-king-gold/10 p-4 rounded-2xl flex items-center justify-between hover:border-king-gold/50 transition-all cursor-pointer">
+        {[
+          {id: 1, name: 'Passenger_1', dest: 'Tokyo'},
+          {id: 2, name: 'Passenger_2', dest: 'Paris'},
+          {id: 3, name: 'Passenger_3', dest: 'Cairo'}
+        ].map(p => (
+          <div key={p.id} onClick={() => triggerFlight(`Hello from ${p.name}`, p.dest)} className="bg-king-blue-light border border-king-gold/10 p-4 rounded-2xl flex items-center justify-between hover:border-king-gold/50 transition-all cursor-pointer">
              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-king-blue flex items-center justify-center font-black text-king-gold">P</div>
-                <div><p className="font-bold text-sm">Passenger_{i}</p><p className="text-[10px] text-king-gold/50 uppercase">Flying to Tokyo</p></div>
+                <div className="w-10 h-10 rounded-xl bg-king-blue flex items-center justify-center font-black text-king-gold">{p.name[0]}</div>
+                <div><p className="font-bold text-sm">{p.name}</p><p className="text-[10px] text-king-gold/50 uppercase">Flying to {p.dest}</p></div>
              </div>
              <ChevronRight size={18} className="text-king-gold/30" />
           </div>
@@ -374,9 +395,20 @@ const ChatDetailView = ({ setView, t, triggerFlight, isRtl, handleSendGift, prof
   const [showOriginal, setShowOriginal] = useState(false);
   const [showGifts, setShowGifts] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [messages, setMessages] = useState([
-    { id: 1, text: "Welcome to Dubai! Hope you had a nice virtual flight. 🛫", original: "مرحباً بك في دبي! نأمل أنك استمتعت برحلتك الافتراضية. 🛫", isSender: false }
-  ]);
+  const [messages, setMessages] = useState([]);
+
+  useEffect(() => {
+    // Fetch initial messages
+    supabase.from('messages').select('*').order('created_at', { ascending: true })
+      .then(({data}) => data && setMessages(data));
+
+    // Listen for new messages
+    const channel = supabase.channel('chat_room').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' },
+      payload => setMessages(prev => [...prev, payload.new])
+    ).subscribe();
+
+    return () => supabase.removeChannel(channel);
+  }, []);
 
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
@@ -401,12 +433,23 @@ const ChatDetailView = ({ setView, t, triggerFlight, isRtl, handleSendGift, prof
        </div>
 
        <div className="flex-1 space-y-4 overflow-y-auto no-scrollbar py-4">
-          {messages.map(msg => (
-            <div key={msg.id} className={`max-w-[85%] p-4 rounded-[2rem] border border-king-gold/10 ${msg.isSender ? (isRtl ? 'mr-auto bg-king-blue-light' : 'ml-auto bg-king-blue-light') : (isRtl ? 'ml-auto bg-king-blue-deep' : 'mr-auto bg-king-blue-deep')}`}>
-               {msg.media ? <img src={msg.media} className="w-full rounded-2xl mb-2" /> : <p className="text-sm leading-relaxed">{showOriginal && msg.original ? msg.original : msg.text}</p>}
-               {msg.original && <button onClick={() => setShowOriginal(!showOriginal)} className="mt-2 text-[8px] font-black uppercase text-king-gold/40 border border-king-gold/20 px-2 py-0.5 rounded-full">{showOriginal ? t.translate : t.original}</button>}
-            </div>
-          ))}
+          {messages.map(msg => {
+            const isVideo = msg.media && (msg.media.toLowerCase().endsWith('.mp4') || msg.media.toLowerCase().endsWith('.webm'));
+            return (
+              <div key={msg.id} className={`max-w-[85%] p-4 rounded-[2rem] border border-king-gold/10 ${msg.isSender ? (isRtl ? 'mr-auto bg-king-blue-light' : 'ml-auto bg-king-blue-light') : (isRtl ? 'ml-auto bg-king-blue-deep' : 'mr-auto bg-king-blue-deep')}`}>
+                 {msg.media ? (
+                    isVideo ? (
+                      <video src={msg.media} controls className="w-full rounded-2xl mb-2 max-h-60 object-cover" />
+                    ) : (
+                      <img src={msg.media} className="w-full rounded-2xl mb-2" />
+                    )
+                 ) : (
+                    <p className="text-sm leading-relaxed">{showOriginal && msg.original ? msg.original : msg.text}</p>
+                 )}
+                 {msg.original && <button onClick={() => setShowOriginal(!showOriginal)} className="mt-2 text-[8px] font-black uppercase text-king-gold/40 border border-king-gold/20 px-2 py-0.5 rounded-full">{showOriginal ? t.translate : t.original}</button>}
+              </div>
+            );
+          })}
        </div>
 
        {showGifts && (
@@ -434,7 +477,22 @@ const ChatDetailView = ({ setView, t, triggerFlight, isRtl, handleSendGift, prof
              {uploading ? <RefreshCw size={18} className="animate-spin" /> : <ImageIcon size={18}/>}
           </label>
           <input type="text" value={text} onChange={e => setText(e.target.value)} placeholder="Type a message..." className="flex-1 bg-transparent px-2 outline-none text-sm placeholder:text-king-gold/20" />
-          <button onClick={() => { if(text.trim()){ triggerFlight(text); setMessages([...messages, {id: Date.now(), text, isSender: true}]); setText(''); } }} className="w-10 h-10 bg-king-gold rounded-full flex items-center justify-center text-king-blue active:scale-90 transition-all"><Send size={18}/></button>
+          <button
+            onClick={async () => {
+              if(text.trim()){
+                triggerFlight(text);
+                await supabase.from('messages').insert({
+                  sender_id: profile.id,
+                  content: text,
+                  flight_state: 'arrived'
+                });
+                setText('');
+              }
+            }}
+            className="w-10 h-10 bg-king-gold rounded-full flex items-center justify-center text-king-blue active:scale-90 transition-all"
+          >
+            <Send size={18}/>
+          </button>
        </div>
     </div>
   );
@@ -543,27 +601,63 @@ const ProfileItem = ({ icon, label, value, onClick, last }) => (
   </div>
 );
 
-const MapView = ({ t, isRtl, lang }) => (
-  <div className="h-[75vh] bg-king-blue-light rounded-[2.5rem] border border-king-gold/10 overflow-hidden relative">
-     <div className="absolute inset-0 opacity-40 bg-[url('https://api.mapbox.com/styles/v1/mapbox/dark-v10/static/0,0,1,0,0/400x400?access_token=pk.ey')] bg-cover"></div>
-     <div className="absolute inset-0 bg-gradient-to-b from-transparent to-king-blue-deep/90"></div>
+const DESTINATIONS = {
+  Dubai: { ar: 'دبي', en: 'Dubai', facts: { ar: 'برج خليفة هو أطول مبنى في العالم.', en: 'Burj Khalifa is the world\'s tallest building.' }, gmt: 'GMT+4' },
+  Tokyo: { ar: 'طوكيو', en: 'Tokyo', facts: { ar: 'طوكيو هي المدينة الأكثر ازدحاماً في العالم.', en: 'Tokyo is the most populous city in the world.' }, gmt: 'GMT+9' },
+  Paris: { ar: 'باريس', en: 'Paris', facts: { ar: 'برج إيفل يزورها ملايين السياح سنوياً.', en: 'Eiffel Tower attracts millions of tourists every year.' }, gmt: 'GMT+1' },
+  Cairo: { ar: 'القاهرة', en: 'Cairo', facts: { ar: 'الأهرامات عمرها أكثر من 4500 عام.', en: 'The pyramids are over 4,500 years old.' }, gmt: 'GMT+2' }
+};
 
-     <div className="absolute bottom-8 left-8 right-8 space-y-4">
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-2">
-           {['Dubai', 'Tokyo', 'Paris', 'Cairo'].map(city => (
-             <button key={city} className="px-4 py-2 bg-king-gold/10 border border-king-gold/20 text-king-gold rounded-full text-[10px] font-black uppercase whitespace-nowrap">{lang === 'ar' ? (city === 'Dubai' ? 'دبي' : city) : city}</button>
-           ))}
-        </div>
-        <div className="bg-king-blue/80 backdrop-blur-xl p-6 rounded-3xl border border-king-gold/20">
-           <h3 className="font-black italic text-king-gold text-xl uppercase mb-2">{lang === 'ar' ? 'مطار دبي الدولي' : 'Dubai International'}</h3>
-           <div className="grid grid-cols-2 gap-4 text-[10px] font-bold uppercase tracking-widest opacity-60">
-              <div className="flex items-center gap-2"><Clock size={12}/> {t.localTime}: 22:45</div>
-              <div className="flex items-center gap-2"><Landmark size={12}/> GMT+4</div>
-           </div>
-        </div>
-     </div>
-  </div>
-);
+const MapView = ({ t, isRtl, lang }) => {
+  const [selectedCity, setSelectedCity] = useState('Dubai');
+  const cityData = DESTINATIONS[selectedCity];
+
+  return (
+    <div className="h-[75vh] bg-king-blue-light rounded-[2.5rem] border border-king-gold/10 overflow-hidden relative">
+       {/* Dynamic Map Visualization (SVG based for instant translation) */}
+       <div className="absolute inset-0 flex items-center justify-center opacity-20 pointer-events-none">
+          <Globe size={300} className="text-king-gold animate-pulse" />
+       </div>
+       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-king-blue-deep/20 to-king-blue-deep/90"></div>
+
+       <div className="absolute inset-0 p-8 flex flex-col">
+          <div className="flex flex-wrap gap-2 mb-auto">
+             {Object.keys(DESTINATIONS).map(city => (
+               <button
+                 key={city}
+                 onClick={() => setSelectedCity(city)}
+                 className={`px-4 py-2 rounded-full text-[10px] font-black uppercase transition-all border ${selectedCity === city ? 'bg-king-gold text-king-blue border-king-gold' : 'bg-king-gold/5 text-king-gold border-king-gold/20'}`}
+               >
+                  {lang === 'ar' ? DESTINATIONS[city].ar : city}
+               </button>
+             ))}
+          </div>
+
+          <div className="bg-king-blue/80 backdrop-blur-xl p-6 rounded-3xl border border-king-gold/20 animate-in slide-in-from-bottom-10">
+             <div className="flex justify-between items-start mb-4">
+                <div>
+                   <h3 className="font-black italic text-king-gold text-2xl uppercase mb-1">{lang === 'ar' ? cityData.ar : cityData.en}</h3>
+                   <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-white/40">
+                      <Landmark size={12} className="text-king-gold" /> {cityData.gmt}
+                   </div>
+                </div>
+                <div className="text-right">
+                   <p className="text-[10px] font-bold text-king-gold uppercase mb-1">{t.localTime}</p>
+                   <p className="text-xl font-black italic">22:45</p>
+                </div>
+             </div>
+
+             <div className="bg-king-gold/5 p-4 rounded-2xl border border-king-gold/10">
+                <p className="text-[8px] font-black uppercase text-king-gold tracking-widest mb-2 flex items-center gap-2">
+                   <Info size={10}/> {t.culturalFact}
+                </p>
+                <p className="text-sm italic leading-relaxed text-white/80">"{lang === 'ar' ? cityData.facts.ar : cityData.facts.en}"</p>
+             </div>
+          </div>
+       </div>
+    </div>
+  );
+};
 
 const LiveStreamView = ({ t, setView, isRtl, handleSendGift, profile }) => {
   const [showGifts, setShowGifts] = useState(false);
@@ -637,9 +731,19 @@ const AdminPanelView = ({ t, isRtl, setView }) => {
   const [requests, setRequests] = useState([]);
 
   useEffect(() => {
-    supabase.from('profiles').select('*').limit(5).then(({data}) => data && setPassengers(data));
-    supabase.from('funding_requests').select('*, profiles(username)').eq('status', 'pending').then(({data}) => data && setRequests(data));
-  }, []);
+    const fetchAdminData = async () => {
+       let query = supabase.from('profiles').select('*');
+       if (search) {
+          query = query.or(`username.ilike.%${search}%,full_name.ilike.%${search}%`);
+       }
+       const { data: profs } = await query.limit(10);
+       if (profs) setPassengers(profs);
+
+       const { data: reqs } = await supabase.from('funding_requests').select('*, profiles(username)').eq('status', 'pending');
+       if (reqs) setRequests(reqs);
+    };
+    fetchAdminData();
+  }, [search]);
 
   const handleFunding = async (id, userId, amount, status) => {
     try {
@@ -668,6 +772,23 @@ const AdminPanelView = ({ t, isRtl, setView }) => {
           <div className="relative">
              <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder={t.searchPassenger} className="w-full bg-king-blue-light border border-king-gold/20 rounded-2xl p-4 pl-12 outline-none focus:ring-1 focus:ring-king-gold text-sm" />
              <SearchIcon className="absolute left-4 top-4 text-king-gold/30" size={20} />
+          </div>
+
+          <div className="bg-king-blue-light rounded-[2.5rem] border border-king-gold/10 overflow-hidden">
+             <div className="p-4 bg-king-gold/5 border-b border-king-gold/10">
+                <span className="text-[10px] font-black uppercase text-king-gold tracking-widest">Passenger Manifest ({passengers.length})</span>
+             </div>
+             <div className="max-h-48 overflow-y-auto no-scrollbar">
+                {passengers.map(p => (
+                  <div key={p.id} className="p-4 flex items-center justify-between border-b border-king-gold/5 last:border-0">
+                     <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-king-blue flex items-center justify-center text-king-gold font-black text-xs">{p.username?.[0].toUpperCase()}</div>
+                        <div><p className="font-bold text-xs">{p.username}</p><p className="text-[8px] text-white/40 uppercase">{p.role}</p></div>
+                     </div>
+                     <span className="text-[10px] font-black text-king-gold">{p.miles} M</span>
+                  </div>
+                ))}
+             </div>
           </div>
 
           <div className="bg-king-blue-light rounded-[2.5rem] border border-king-gold/10 overflow-hidden">

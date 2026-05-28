@@ -124,3 +124,49 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- SERVER-SIDE RATE LIMIT ENFORCEMENT
+CREATE OR REPLACE FUNCTION public.enforce_profile_rate_limits()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Avatar: 1 day
+  IF NEW.avatar_url IS DISTINCT FROM OLD.avatar_url THEN
+    IF (OLD.last_avatar_update > (NOW() - INTERVAL '1 day')) THEN
+      RAISE EXCEPTION 'Avatar update allowed once per day';
+    END IF;
+    NEW.last_avatar_update := NOW();
+  END IF;
+
+  -- Full Name: 1 week
+  IF NEW.full_name IS DISTINCT FROM OLD.full_name THEN
+    IF (OLD.last_name_update > (NOW() - INTERVAL '7 days')) THEN
+      RAISE EXCEPTION 'Name update allowed once per week';
+    END IF;
+    NEW.last_name_update := NOW();
+  END IF;
+
+  -- Username: 1 month
+  IF NEW.username IS DISTINCT FROM OLD.username THEN
+    IF (OLD.last_username_update > (NOW() - INTERVAL '30 days')) THEN
+      RAISE EXCEPTION 'Username update allowed once per month';
+    END IF;
+    NEW.last_username_update := NOW();
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER tr_enforce_profile_limits
+  BEFORE UPDATE ON public.profiles
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_profile_rate_limits();
+
+-- ADMIN: ADD MILES FUNCTION
+CREATE OR REPLACE FUNCTION public.add_miles(user_id UUID, amount DECIMAL)
+RETURNS VOID AS $$
+BEGIN
+  UPDATE public.profiles
+  SET miles = miles + amount
+  WHERE id = user_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
