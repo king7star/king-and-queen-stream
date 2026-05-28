@@ -103,18 +103,21 @@ const App = () => {
     });
 
     // Listen for Global Broadcasts
-    supabase.channel('broadcasts').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'broadcasts' },
+    const broadcastChannel = supabase.channel('broadcasts').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'broadcasts' },
       payload => setLatestBroadcast(payload.new)
     ).subscribe();
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      broadcastChannel.unsubscribe();
+    };
   }, []);
 
   const fetchUserData = async (userId) => {
     const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
     if (data) setProfile(data);
 
-    supabase.channel('profile_realtime').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` },
+    supabase.channel(`profile_${userId}`).on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` },
       payload => setProfile(payload.new)
     ).subscribe();
   };
